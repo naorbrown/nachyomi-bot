@@ -31,7 +31,7 @@ Nach Yomi Bot delivers the daily Nach Yomi chapter directly to Telegram with **e
 ## Quick Start
 
 ```bash
-git clone https://github.com/yourusername/nachyomi-bot.git
+git clone https://github.com/naorbrown/nachyomi-bot.git
 cd nachyomi-bot
 npm install
 export TELEGRAM_BOT_TOKEN="your-token"
