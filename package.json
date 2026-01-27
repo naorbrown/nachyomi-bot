@@ -1,6 +1,6 @@
 {
   "name": "nachyomi-bot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Daily Nach Yomi with Rav Breitowitz shiurim from Kol Halashon",
   "main": "src/index.js",
   "type": "module",
@@ -22,15 +22,16 @@
     "navi",
     "kesuvim"
   ],
-  "author": "",
+  "author": "naorbrown",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/nachyomi-bot.git"
+    "url": "https://github.com/naorbrown/nachyomi-bot.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/nachyomi-bot/issues"
+    "url": "https://github.com/naorbrown/nachyomi-bot/issues"
   },
+  "homepage": "https://github.com/naorbrown/nachyomi-bot#readme",
   "dependencies": {
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",

@@ -36,7 +36,7 @@ docs: update deployment instructions
 ## Development Setup
 
 ```bash
-git clone https://github.com/yourusername/nachyomi-bot.git
+git clone https://github.com/naorbrown/nachyomi-bot.git
 cd nachyomi-bot
 npm install
 export TELEGRAM_BOT_TOKEN="your-test-token"
