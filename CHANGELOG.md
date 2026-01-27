@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - dotenv support for environment configuration
 - Unique timestamps in video filenames to bypass Telegram caching
 - User notifications with Kol Halashon fallback links when video/audio fails
+- **Jeremiah shiur ID mappings** — All 52 chapters mapped (100% coverage)
 
 ### Changed
 

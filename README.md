@@ -251,11 +251,12 @@ Video/audio embedding is available for chapters with mapped shiur IDs:
 | II Samuel | 1-24 | ✅ 100% |
 | I Kings | 1-22 | ✅ 100% |
 | II Kings | 2-25 | ✅ 96% |
+| Jeremiah | 1-52 | ✅ 100% |
 | Haggai | 1-2 | ✅ 100% |
 | II Chronicles | 1-36 | ✅ 100% |
 | Other books | — | 📝 Text + link to Kol Halashon |
 
-**Total: 200+ shiurim mapped**
+**Total: 250+ shiurim mapped**
 
 ## Data Sources
 
