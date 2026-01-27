@@ -2,12 +2,12 @@
 
 # Nach Yomi Bot
 
-**Daily Nach chapter with Rav Breitowitz's shiurim, delivered to Telegram.**
+**Daily Nach chapter with Rav Breitowitz's full shiurim, delivered to Telegram.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org)
 [![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-blue.svg)](https://t.me/NachYomi_Bot)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://github.com/naorbrown/nachyomi-bot/pkgs/container/nachyomi-bot)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](Dockerfile)
 
 [**Try the Bot**](https://t.me/NachYomi_Bot) · [Report Bug](https://github.com/naorbrown/nachyomi-bot/issues) · [Request Feature](https://github.com/naorbrown/nachyomi-bot/issues)
 
@@ -17,19 +17,31 @@
 
 ## Overview
 
-Nach Yomi Bot delivers the daily Nach Yomi chapter directly to Telegram with **embedded video and audio** shiurim by Harav Yitzchok Breitowitz שליט״א from Kol Halashon. One chapter of Nevi'im or Kesuvim, every day.
+Nach Yomi Bot delivers the daily Nach Yomi chapter directly to Telegram with **full embedded video and audio** shiurim by Harav Yitzchok Breitowitz שליט״א from Kol Halashon. One chapter of Nevi'im or Kesuvim, every day.
 
 ### Features
 
 | Feature | Description |
 |---------|-------------|
-| **Embedded Video** | Watch 2-minute shiur previews directly in Telegram |
-| **Embedded Audio** | Listen to full shiurim without leaving Telegram |
+| **Full Video Shiurim** | Complete video lectures embedded in Telegram (when under 50MB) |
+| **Full Audio Shiurim** | Complete audio shiurim without leaving Telegram |
 | **Full Text** | Complete Hebrew verses with English translation |
 | **Daily Schedule** | Follows the official Hebcal Nach Yomi calendar |
 | **Channel Support** | Scheduled posts at 6:00 AM Israel time |
 
 ## Quick Start
+
+### Option 1: Docker (Recommended)
+
+```bash
+docker run -d \
+  --name nachyomi-bot \
+  --restart unless-stopped \
+  -e TELEGRAM_BOT_TOKEN="your-token" \
+  ghcr.io/naorbrown/nachyomi-bot:latest
+```
+
+### Option 2: Node.js
 
 ```bash
 git clone https://github.com/naorbrown/nachyomi-bot.git
@@ -39,7 +51,7 @@ export TELEGRAM_BOT_TOKEN="your-token"
 npm start
 ```
 
-### Video Mode (Recommended)
+### FFmpeg Requirement
 
 Video embedding requires FFmpeg for HLS-to-MP4 conversion:
 
@@ -54,16 +66,20 @@ sudo apt install ffmpeg
 apk add ffmpeg
 ```
 
+The Docker image includes FFmpeg automatically.
+
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | `/start` | Welcome message + today's chapter |
-| `/today` | Today's Nach Yomi chapter |
-| `/tomorrow` | Tomorrow's chapter (preview) |
-| `/video` | Request video shiur explicitly |
+| `/today` | Today's Nach Yomi (video + audio + text) |
+| `/tomorrow` | Tomorrow's chapter preview |
+| `/video` | Video shiur only |
+| `/audio` | Audio shiur only |
+| `/text` | Text only (no media) |
+| `/help` | Show all commands |
 | `/about` | About the bot and sources |
-| `/help` | Show available commands |
 
 ## Configuration
 
@@ -72,6 +88,13 @@ apk add ffmpeg
 | `TELEGRAM_BOT_TOKEN` | Yes | From [@BotFather](https://t.me/BotFather) |
 | `TELEGRAM_CHANNEL_ID` | No | Channel ID for scheduled daily posts |
 | `ADMIN_CHAT_ID` | No | Chat ID for error notifications |
+
+### Environment File
+
+```bash
+cp .env.example .env
+# Edit .env with your values
+```
 
 ## Architecture
 
@@ -88,8 +111,6 @@ src/
 
 ## How Video Embedding Works
 
-The bot converts HLS video streams from Kol Halashon to MP4 format:
-
 ```
 ┌─────────────────┐    ┌─────────────┐    ┌──────────────┐
 │  Kol Halashon   │───►│   FFmpeg    │───►│   Telegram   │
@@ -99,25 +120,28 @@ The bot converts HLS video streams from Kol Halashon to MP4 format:
 
 1. Fetches HLS playlist from `media2.kolhalashon.com`
 2. Remuxes to MP4 (no re-encoding, preserves quality)
-3. Limits to 2 minutes (under Telegram's 50MB limit)
-4. Falls back to audio if video unavailable
+3. If under 50MB: embeds directly in Telegram
+4. If over 50MB: provides link to Kol Halashon
+5. Always includes full audio as backup
 
 ## Deployment
 
-### Docker (Recommended)
+### Docker Compose (Production)
 
-The Docker image includes FFmpeg for full video support:
-
-```bash
-docker pull ghcr.io/naorbrown/nachyomi-bot:latest
-docker run -e TELEGRAM_BOT_TOKEN="your-token" ghcr.io/naorbrown/nachyomi-bot
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  nachyomi-bot:
+    image: ghcr.io/naorbrown/nachyomi-bot:latest
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
+      - ADMIN_CHAT_ID=${ADMIN_CHAT_ID}
 ```
 
-### Docker Compose
-
 ```bash
-cp .env.example .env
-# Edit .env with your token
 docker-compose up -d
 ```
 
@@ -125,16 +149,44 @@ docker-compose up -d
 
 ```bash
 docker build -t nachyomi-bot .
-docker run -e TELEGRAM_BOT_TOKEN="token" nachyomi-bot
+docker run -d -e TELEGRAM_BOT_TOKEN="token" nachyomi-bot
 ```
 
 ### Cloud Platforms
 
 | Platform | Instructions |
 |----------|--------------|
-| Railway | Connect repo, set `TELEGRAM_BOT_TOKEN`, deploy |
-| Render | Use Docker runtime, set environment variables |
-| Fly.io | `fly launch`, set secrets, deploy |
+| **Railway** | Connect repo, set `TELEGRAM_BOT_TOKEN`, deploy |
+| **Render** | Use Docker runtime, set environment variables |
+| **Fly.io** | `fly launch`, set secrets with `fly secrets set` |
+| **DigitalOcean** | App Platform with Docker, set env vars |
+
+### Process Manager (PM2)
+
+```bash
+npm install -g pm2
+pm2 start src/index.js --name nachyomi-bot
+pm2 save
+pm2 startup
+```
+
+## Shiur Coverage
+
+Video/audio embedding is available for chapters with mapped shiur IDs:
+
+| Book | Chapters | Coverage |
+|------|----------|----------|
+| Joshua | 1-24 | ✅ 100% |
+| Judges | 1-21 | ✅ 100% |
+| I Samuel | 8-31 | ✅ 77% |
+| II Samuel | 1-24 | ✅ 100% |
+| I Kings | 1-22 | ✅ 100% |
+| II Kings | 2-25 | ✅ 96% |
+| Haggai | 1-2 | ✅ 100% |
+| II Chronicles | 1-36 | ✅ 100% |
+| Other books | — | 📝 Text + link to Kol Halashon |
+
+**Total: 200+ shiurim mapped**
 
 ## Data Sources
 
@@ -144,27 +196,13 @@ docker run -e TELEGRAM_BOT_TOKEN="token" nachyomi-bot
 | [Kol Halashon](https://kolhalashon.com) | Video/Audio shiurim | HLS/MP3 |
 | [Sefaria](https://sefaria.org) | Hebrew + English text | REST |
 
-## Shiur Coverage
-
-Video/audio embedding is available for chapters with mapped shiur IDs:
-
-| Book | Chapters | Status |
-|------|----------|--------|
-| Joshua | 1-24 | ✅ Complete |
-| Judges | 1-21 | ✅ Complete |
-| Haggai | 1-2 | ✅ Complete |
-| II Chronicles | 1-36 | ✅ Complete |
-| Other books | — | 📝 Text only |
-
-Want to help map more shiurim? See [CONTRIBUTING.md](CONTRIBUTING.md).
-
 ## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Priority Areas
 
-- 🎬 **Shiur ID mapping** — Help map unmapped books
+- 🎬 **Shiur ID mapping** — Help map unmapped books (Isaiah, Jeremiah, etc.)
 - 🐛 **Bug fixes** — Report or fix issues
 - 📖 **Documentation** — Improve guides and examples
 

@@ -1,7 +1,7 @@
 {
   "name": "nachyomi-bot",
-  "version": "1.1.0",
-  "description": "Daily Nach Yomi with Rav Breitowitz shiurim from Kol Halashon",
+  "version": "2.0.0",
+  "description": "Daily Nach Yomi with full video and audio shiurim from Rav Breitowitz via Kol Halashon",
   "main": "src/index.js",
   "type": "module",
   "engines": {
@@ -10,7 +10,11 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node test-apis.js"
+    "test": "node test-apis.js",
+    "docker:build": "docker build -t nachyomi-bot .",
+    "docker:run": "docker run -d --name nachyomi-bot -e TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN nachyomi-bot",
+    "docker:logs": "docker logs -f nachyomi-bot",
+    "docker:stop": "docker stop nachyomi-bot && docker rm nachyomi-bot"
   },
   "keywords": [
     "nach-yomi",
