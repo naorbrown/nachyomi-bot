@@ -15,6 +15,7 @@
  *   /about    - About this bot and sources
  */
 
+import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
 import cron from 'node-cron';
 import { createReadStream } from 'fs';
@@ -100,6 +101,14 @@ async function sendVideoShiur(chatId, nachYomi, shiurId) {
     }
   } catch (err) {
     console.warn('Video failed:', err.message);
+    // Notify user of failure with fallback link
+    const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
+    await bot.sendMessage(chatId,
+      `🎬 *Video Shiur*\n\n` +
+      `Video conversion failed. Watch on Kol Halashon instead:\n\n` +
+      `[Watch Full Shiur](${shiurPageUrl})`,
+      { parse_mode: 'Markdown', disable_web_page_preview: true }
+    ).catch(() => {});
   }
   return false;
 }
@@ -133,6 +142,14 @@ async function sendAudioShiur(chatId, nachYomi, shiurId) {
     return true;
   } catch (err) {
     console.warn('Audio failed:', err.message);
+    // Notify user of failure with fallback link
+    const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
+    await bot.sendMessage(chatId,
+      `🎧 *Audio Shiur*\n\n` +
+      `Audio loading failed. Listen on Kol Halashon instead:\n\n` +
+      `[Listen to Full Shiur](${shiurPageUrl})`,
+      { parse_mode: 'Markdown', disable_web_page_preview: true }
+    ).catch(() => {});
     return false;
   }
 }
@@ -168,7 +185,7 @@ async function sendDailyNachYomi(chatId, options = {}) {
 
     const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
 
-    // 1. VIDEO (2-minute preview)
+    // 1. VIDEO (full shiur)
     if (!audioOnly && !textOnly) {
       await sendVideoShiur(chatId, nachYomi, shiurId);
     }

@@ -88,10 +88,12 @@ export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
 
 /**
  * Download and convert a shiur video for Telegram
+ * Uses unique timestamp in filename to bypass Telegram's file_id caching
  */
 export async function prepareVideoForTelegram(hlsUrl, shiurId) {
   const tempDir = os.tmpdir();
-  const outputPath = path.join(tempDir, `shiur_${shiurId}.mp4`);
+  const timestamp = Date.now();
+  const outputPath = path.join(tempDir, `shiur_${shiurId}_${timestamp}.mp4`);
 
   try {
     // Convert HLS to MP4 (full video)

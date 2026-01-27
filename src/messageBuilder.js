@@ -186,19 +186,20 @@ _לעילוי נשמת כל לומדי התורה_`;
 }
 
 /**
- * Convert number to Hebrew numerals
+ * Convert number to Hebrew numerals (gematria)
+ * Handles 1-999 using standard Hebrew numeral conventions
  */
 function toHebrewNumerals(num) {
   const ones = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
   const tens = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
-  const hundreds = ['', 'ק', 'ר', 'ש', 'ת'];
+  const hundreds = ['', 'ק', 'ר', 'ש', 'ת', 'תק', 'תר', 'תש', 'תת', 'תתק'];
 
   if (num <= 0 || num > 999) return num.toString();
 
   let result = '';
   const h = Math.floor(num / 100);
   if (h > 0) {
-    result += h <= 4 ? hundreds[h] : 'ת' + hundreds[h - 4];
+    result += hundreds[h];
   }
 
   num = num % 100;
