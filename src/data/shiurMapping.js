@@ -53,7 +53,9 @@ export const shiurMapping = {
   "Nahum": { totalChapters: 3, available: true },
   "Habakkuk": { totalChapters: 3, available: true },
   "Zephaniah": { totalChapters: 3, available: true },
-  "Haggai": { totalChapters: 2, available: true },
+  "Haggai": {
+    1: 34348826, 2: 34348827
+  },
   "Zechariah": { totalChapters: 14, available: true },
   "Malachi": { totalChapters: 3, available: true },
 
