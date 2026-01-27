@@ -150,7 +150,7 @@ export function buildHelpMessage() {
 /help — Show this help message
 
 *Tips*
-• Videos under 50MB are embedded; larger ones link to Kol Halashon
+• Full video shiurim are embedded (split into parts if over 50MB)
 • Audio is the complete shiur
 • Text includes Hebrew with English translation
 
@@ -166,7 +166,7 @@ export function buildAboutMessage() {
 Daily Nach Yomi with shiurim by Harav Yitzchok Breitowitz שליט״א from Kol Halashon.
 
 *Features*
-• 🎬 Full video shiurim (embedded when under 50MB)
+• 🎬 Full video shiurim (split into parts for long shiurim)
 • 🎧 Full audio shiurim
 • 📜 Complete Hebrew + English text
 • ⏰ Daily posts at 6:00 AM Israel

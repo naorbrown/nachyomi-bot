@@ -31,7 +31,7 @@ import {
   buildHelpMessage
 } from './messageBuilder.js';
 import { getShiurId, getShiurAudioUrl, getShiurVideoUrl, getShiurUrl } from './data/shiurMapping.js';
-import { prepareVideoForTelegram, cleanupVideo, checkFfmpeg } from './videoService.js';
+import { prepareVideoForTelegram, cleanupVideo, cleanupVideoParts, checkFfmpeg } from './videoService.js';
 
 // Configuration
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -54,7 +54,17 @@ let ffmpegAvailable = false;
 })();
 
 /**
+ * Format duration in minutes:seconds
+ */
+function formatDuration(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
  * Send video shiur for a chapter
+ * Handles both single videos and multi-part videos for large shiurim
  */
 async function sendVideoShiur(chatId, nachYomi, shiurId) {
   if (!ffmpegAvailable) {
@@ -68,37 +78,74 @@ async function sendVideoShiur(chatId, nachYomi, shiurId) {
   }
 
   try {
-    const statusMsg = await bot.sendMessage(chatId, '🎬 _Converting video (this may take a few minutes)..._', { parse_mode: 'Markdown' });
+    const statusMsg = await bot.sendMessage(chatId, '🎬 _Converting full video shiur (this may take several minutes)..._', { parse_mode: 'Markdown' });
 
     const videoUrl = getShiurVideoUrl(shiurId);
-    const videoFile = await prepareVideoForTelegram(videoUrl, shiurId);
+    const videoResult = await prepareVideoForTelegram(videoUrl, shiurId);
 
     // Delete status message
     await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
 
-    if (videoFile && videoFile.tooLarge) {
-      // Video exceeds Telegram's 50MB limit - provide external link
+    if (!videoResult) {
+      throw new Error('Video preparation failed');
+    }
+
+    if (videoResult.tooLarge) {
+      // Splitting failed - provide external link
       const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
       await bot.sendMessage(chatId,
         `🎬 *Video Shiur*\n\n` +
-        `The full video for ${nachYomi.book} ${nachYomi.chapter} exceeds Telegram's 50MB limit.\n\n` +
+        `The video could not be processed for Telegram.\n\n` +
         `[Watch on Kol Halashon](${shiurPageUrl})`,
         { parse_mode: 'Markdown', disable_web_page_preview: true }
       );
       return false;
     }
 
-    if (videoFile && videoFile.path) {
-      await bot.sendVideo(chatId, createReadStream(videoFile.path), {
+    // Handle multi-part videos
+    if (videoResult.parts) {
+      const { parts, totalDuration } = videoResult;
+      const totalMins = Math.round(totalDuration / 60);
+
+      await bot.sendMessage(chatId,
+        `🎬 *${nachYomi.book} ${nachYomi.chapter}* — Full Video Shiur\n\n` +
+        `_Total duration: ~${totalMins} minutes_\n` +
+        `_Sending in ${parts.length} parts..._`,
+        { parse_mode: 'Markdown' }
+      );
+
+      for (const part of parts) {
+        const partCaption = `🎬 *Part ${part.partNumber}/${part.totalParts}*\n` +
+          `_${nachYomi.book} ${nachYomi.chapter}_ · Rav Yitzchok Breitowitz`;
+
+        await bot.sendVideo(chatId, createReadStream(part.path), {
+          caption: partCaption,
+          parse_mode: 'Markdown',
+          supports_streaming: true,
+          reply_markup: part.partNumber === part.totalParts
+            ? buildMediaKeyboard(nachYomi.book, nachYomi.chapter)
+            : undefined
+        });
+      }
+
+      await cleanupVideoParts(parts);
+      console.log(`Video sent in ${parts.length} parts: ${nachYomi.book} ${nachYomi.chapter}`);
+      return true;
+    }
+
+    // Single video (under 50MB)
+    if (videoResult.path) {
+      await bot.sendVideo(chatId, createReadStream(videoResult.path), {
         caption: buildMediaCaption(nachYomi, 'video'),
         parse_mode: 'Markdown',
         reply_markup: buildMediaKeyboard(nachYomi.book, nachYomi.chapter),
         supports_streaming: true
       });
-      await cleanupVideo(videoFile.path);
+      await cleanupVideo(videoResult.path);
       console.log(`Video sent: ${nachYomi.book} ${nachYomi.chapter}`);
       return true;
     }
+
   } catch (err) {
     console.warn('Video failed:', err.message);
     // Notify user of failure with fallback link
