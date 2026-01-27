@@ -23,7 +23,7 @@ Nach Yomi Bot delivers the daily Nach Yomi chapter directly to Telegram with **f
 
 | Feature | Description |
 |---------|-------------|
-| **Full Video Shiurim** | Complete video lectures embedded in Telegram (when under 50MB) |
+| **Full Video Shiurim** | Complete video lectures embedded in Telegram (auto-split if over 50MB) |
 | **Full Audio Shiurim** | Complete audio shiurim without leaving Telegram |
 | **Full Text** | Complete Hebrew verses with English translation |
 | **Daily Schedule** | Follows the official Hebcal Nach Yomi calendar |
@@ -98,31 +98,100 @@ cp .env.example .env
 
 ## Architecture
 
+### System Overview
+
 ```
-src/
-├── index.js              # Bot entry point & command handlers
-├── hebcalService.js      # Nach Yomi schedule from Hebcal API
-├── sefariaService.js     # Chapter text from Sefaria API
-├── messageBuilder.js     # Telegram message formatting
-├── videoService.js       # FFmpeg HLS-to-MP4 conversion
-└── data/
-    └── shiurMapping.js   # Kol Halashon shiur ID mappings
+┌──────────────────────────────────────────────────────────────────────────┐
+│                            Nach Yomi Bot                                  │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐                │
+│  │   Hebcal    │     │ Kol Halashon│     │   Sefaria   │                │
+│  │    API      │     │  HLS/MP3    │     │    API      │                │
+│  └──────┬──────┘     └──────┬──────┘     └──────┬──────┘                │
+│         │                   │                   │                        │
+│         ▼                   ▼                   ▼                        │
+│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐                │
+│  │  hebcal     │     │   video     │     │  sefaria    │                │
+│  │  Service    │     │  Service    │     │  Service    │                │
+│  └──────┬──────┘     └──────┬──────┘     └──────┬──────┘                │
+│         │                   │                   │                        │
+│         └───────────────────┼───────────────────┘                        │
+│                             ▼                                            │
+│                    ┌─────────────────┐                                   │
+│                    │   index.js      │                                   │
+│                    │  Bot Commands   │                                   │
+│                    │  & Scheduler    │                                   │
+│                    └────────┬────────┘                                   │
+│                             │                                            │
+│                             ▼                                            │
+│                    ┌─────────────────┐                                   │
+│                    │ messageBuilder  │                                   │
+│                    │  & Keyboards    │                                   │
+│                    └────────┬────────┘                                   │
+│                             │                                            │
+└─────────────────────────────┼────────────────────────────────────────────┘
+                              ▼
+                     ┌─────────────────┐
+                     │    Telegram     │
+                     │    Bot API      │
+                     └─────────────────┘
 ```
+
+### Directory Structure
+
+```
+nachyomi-bot/
+├── src/
+│   ├── index.js              # Bot entry, commands, cron scheduler
+│   ├── hebcalService.js      # Nach Yomi calendar API integration
+│   ├── sefariaService.js     # Hebrew/English text fetching
+│   ├── messageBuilder.js     # Telegram message formatting
+│   ├── videoService.js       # HLS→MP4 conversion & splitting
+│   └── data/
+│       └── shiurMapping.js   # 200+ shiur ID mappings
+├── .github/workflows/        # CI/CD pipelines
+├── Dockerfile                # Multi-stage production build
+├── docker-compose.yml        # Container orchestration
+└── .env.example              # Environment template
+```
+
+### Tech Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| Runtime | Node.js 18+ | ES modules, async/await |
+| Bot Framework | node-telegram-bot-api | Telegram integration |
+| Scheduler | node-cron | Daily 6 AM posts |
+| Video Processing | FFmpeg | HLS stream conversion |
+| Containerization | Docker | Production deployment |
+| CI/CD | GitHub Actions | Automated builds |
+
+### Data Flow
+
+1. **Schedule Fetch**: Hebcal API → Today's book/chapter
+2. **Content Assembly**:
+   - Video: Kol Halashon HLS → FFmpeg → MP4 (split if >50MB)
+   - Audio: Direct MP3 URL from Kol Halashon
+   - Text: Sefaria API → Hebrew + English verses
+3. **Delivery**: Telegram Bot API → User/Channel
 
 ## How Video Embedding Works
 
 ```
-┌─────────────────┐    ┌─────────────┐    ┌──────────────┐
-│  Kol Halashon   │───►│   FFmpeg    │───►│   Telegram   │
-│  HLS Stream     │    │  Remuxing   │    │   Embedded   │
-└─────────────────┘    └─────────────┘    └──────────────┘
+┌─────────────────┐    ┌─────────────┐    ┌──────────────┐    ┌──────────────┐
+│  Kol Halashon   │───►│   FFmpeg    │───►│  Size Check  │───►│   Telegram   │
+│  HLS Stream     │    │  Remuxing   │    │  & Splitter  │    │   Embedded   │
+└─────────────────┘    └─────────────┘    └──────────────┘    └──────────────┘
 ```
 
-1. Fetches HLS playlist from `media2.kolhalashon.com`
-2. Remuxes to MP4 (no re-encoding, preserves quality)
-3. If under 50MB: embeds directly in Telegram
-4. If over 50MB: provides link to Kol Halashon
-5. Always includes full audio as backup
+1. Fetches full HLS playlist from `media2.kolhalashon.com`
+2. Converts to MP4 with FFmpeg (stream copy, no quality loss)
+3. Checks file size against Telegram's 50MB limit
+4. **Under 50MB**: Sends as single embedded video
+5. **Over 50MB**: Automatically splits into ~45MB parts and sends sequentially
+6. Each part labeled "Part 1/3", "Part 2/3", etc. with total duration shown
+7. Full audio always included as backup
 
 ## Deployment
 

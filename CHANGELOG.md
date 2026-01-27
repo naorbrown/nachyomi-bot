@@ -5,7 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2025-01-27
+## [2.0.0] - 2026-01-27
+
+### Added
+
+- **Full video shiurim** — Complete video lectures embedded in Telegram (no more 2-min limit)
+- **Automatic video splitting** — Videos over 50MB are split into ~45MB parts and sent sequentially
+- Part labeling ("Part 1/3", "Part 2/3") with total duration shown
+- dotenv support for environment configuration
+- Unique timestamps in video filenames to bypass Telegram caching
+- User notifications with Kol Halashon fallback links when video/audio fails
+
+### Changed
+
+- Video timeout increased to 10 minutes for full-length shiurim
+- Improved Hebrew numerals conversion (fixed 500-999 range)
+- Updated all messaging to reflect "full shiur" instead of "preview"
+
+### Fixed
+
+- Hebrew numerals bug causing undefined for numbers 500-999
+- Telegram file_id caching causing old 2-min videos to persist
+- Missing user feedback when video conversion fails
+
+## [1.1.0] - 2026-01-27
 
 ### Added
 
