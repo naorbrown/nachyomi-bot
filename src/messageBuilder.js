@@ -66,12 +66,14 @@ export function buildDailyMessage(nachYomi, chapterText = null) {
 /**
  * Build a compact caption for media messages (video/audio)
  */
-export function buildMediaCaption(nachYomi) {
+export function buildMediaCaption(nachYomi, mediaType = 'video') {
   const { book, chapter } = nachYomi;
   const hebrewName = hebrewNames[book] || book;
+  const icon = mediaType === 'video' ? '🎬' : '🎧';
+  const label = mediaType === 'video' ? '2-min preview' : 'Full shiur';
 
-  return `🎬 *${book} ${chapter}* · ${hebrewName} ${toHebrewNumerals(chapter)}\n` +
-         `_Rav Yitzchok Breitowitz · Kol Halashon_`;
+  return `${icon} *${book} ${chapter}* · ${hebrewName} ${toHebrewNumerals(chapter)}\n` +
+         `_Rav Yitzchok Breitowitz · ${label}_`;
 }
 
 /**
@@ -117,15 +119,43 @@ export function buildMediaKeyboard(book, chapter) {
 export function buildWelcomeMessage() {
   return `📖 *Nach Yomi Bot*
 
-Daily Nach chapter with Rav Breitowitz's shiur.
+Daily Nach chapter with Rav Breitowitz's shiurim from Kol Halashon.
 
-*Commands*
-/today — Today's chapter
-/tomorrow — Tomorrow's chapter
-/video — Video shiur (3 min preview)
-/about — About this bot
+*What you'll receive:*
+• 🎬 Video shiur (2-min preview)
+• 🎧 Audio shiur (full length)
+• 📜 Complete Hebrew + English text
 
-_One chapter of Nevi'im or Kesuvim each day._`;
+_One chapter of Nevi'im or Kesuvim each day._
+
+Type /help for all commands.`;
+}
+
+/**
+ * Build help message with all commands
+ */
+export function buildHelpMessage() {
+  return `*Nach Yomi Bot Commands*
+
+*Daily Content*
+/today — Today's chapter (video + audio + text)
+/tomorrow — Preview tomorrow's chapter
+
+*Media Options*
+/video — Video shiur only (2-min preview)
+/audio — Audio shiur only (full length)
+/text — Text only (no media)
+
+*Information*
+/about — About this bot and sources
+/help — Show this help message
+
+*Tips*
+• Video previews are 2 minutes (full shiur on Kol Halashon)
+• Audio is the complete shiur
+• Text includes Hebrew with English translation
+
+_Bot posts daily at 6:00 AM Israel time._`;
 }
 
 /**
@@ -137,17 +167,21 @@ export function buildAboutMessage() {
 Daily Nach Yomi with shiurim by Harav Yitzchok Breitowitz שליט״א from Kol Halashon.
 
 *Features*
-• Embedded video shiurim (3 min preview)
-• Full Hebrew text with English translation
-• Daily scheduled posts at 6 AM Israel
+• 🎬 Embedded video previews (2 min)
+• 🎧 Full audio shiurim
+• 📜 Complete Hebrew + English text
+• ⏰ Daily posts at 6:00 AM Israel
 
-*Sources*
-• Schedule — Hebcal
-• Shiurim — Kol Halashon
-• Text — Sefaria
+*Data Sources*
+• [Hebcal](https://hebcal.com) — Nach Yomi schedule
+• [Kol Halashon](https://kolhalashon.com) — Shiurim
+• [Sefaria](https://sefaria.org) — Text & translations
 
 *About Rav Breitowitz*
-Rav of Kehillat Ohr Somayach, Jerusalem. Renowned for depth, clarity, and practical wisdom.
+Rav of Kehillat Ohr Somayach, Jerusalem. World-renowned for his depth, clarity, and practical wisdom in Torah and Halacha.
+
+*Open Source*
+[GitHub Repository](https://github.com/naorbrown/nachyomi-bot)
 
 _לעילוי נשמת כל לומדי התורה_`;
 }
