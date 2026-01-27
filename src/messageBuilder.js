@@ -70,10 +70,9 @@ export function buildMediaCaption(nachYomi, mediaType = 'video') {
   const { book, chapter } = nachYomi;
   const hebrewName = hebrewNames[book] || book;
   const icon = mediaType === 'video' ? '🎬' : '🎧';
-  const label = mediaType === 'video' ? '2-min preview' : 'Full shiur';
 
   return `${icon} *${book} ${chapter}* · ${hebrewName} ${toHebrewNumerals(chapter)}\n` +
-         `_Rav Yitzchok Breitowitz · ${label}_`;
+         `_Rav Yitzchok Breitowitz_`;
 }
 
 /**
@@ -122,8 +121,8 @@ export function buildWelcomeMessage() {
 Daily Nach chapter with Rav Breitowitz's shiurim from Kol Halashon.
 
 *What you'll receive:*
-• 🎬 Video shiur (2-min preview)
-• 🎧 Audio shiur (full length)
+• 🎬 Full video shiur
+• 🎧 Full audio shiur
 • 📜 Complete Hebrew + English text
 
 _One chapter of Nevi'im or Kesuvim each day._
@@ -142,8 +141,8 @@ export function buildHelpMessage() {
 /tomorrow — Preview tomorrow's chapter
 
 *Media Options*
-/video — Video shiur only (2-min preview)
-/audio — Audio shiur only (full length)
+/video — Video shiur only
+/audio — Audio shiur only
 /text — Text only (no media)
 
 *Information*
@@ -151,7 +150,7 @@ export function buildHelpMessage() {
 /help — Show this help message
 
 *Tips*
-• Video previews are 2 minutes (full shiur on Kol Halashon)
+• Videos under 50MB are embedded; larger ones link to Kol Halashon
 • Audio is the complete shiur
 • Text includes Hebrew with English translation
 
@@ -167,7 +166,7 @@ export function buildAboutMessage() {
 Daily Nach Yomi with shiurim by Harav Yitzchok Breitowitz שליט״א from Kol Halashon.
 
 *Features*
-• 🎬 Embedded video previews (2 min)
+• 🎬 Full video shiurim (embedded when under 50MB)
 • 🎧 Full audio shiurim
 • 📜 Complete Hebrew + English text
 • ⏰ Daily posts at 6:00 AM Israel

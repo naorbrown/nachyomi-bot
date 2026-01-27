@@ -16,7 +16,7 @@ const statAsync = promisify(stat);
 
 // Telegram limits
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
-const DEFAULT_DURATION = 120; // 2 minutes - keeps file under 50MB at typical bitrates
+const DEFAULT_DURATION = null; // Full video - no duration limit
 
 /**
  * Check if FFmpeg is available
@@ -35,7 +35,7 @@ export async function checkFfmpeg() {
 export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
   const {
     maxDuration = DEFAULT_DURATION,
-    timeout = 60000, // 1 minute timeout
+    timeout = 300000, // 5 minute timeout for full videos
   } = options;
 
   return new Promise((resolve, reject) => {
@@ -43,14 +43,21 @@ export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
       '-y',
       '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
       '-i', hlsUrl,
-      '-t', String(maxDuration),
+    ];
+
+    // Only add duration limit if specified
+    if (maxDuration) {
+      args.push('-t', String(maxDuration));
+    }
+
+    args.push(
       '-c', 'copy',
       '-bsf:a', 'aac_adtstoasc',
       '-movflags', '+faststart',
       outputPath
-    ];
+    );
 
-    console.log(`Converting HLS to MP4 (${maxDuration}s): ${hlsUrl}`);
+    console.log(`Converting HLS to MP4${maxDuration ? ` (${maxDuration}s)` : ' (full)'}: ${hlsUrl}`);
     const proc = spawn('ffmpeg', args);
 
     let stderr = '';
@@ -87,7 +94,7 @@ export async function prepareVideoForTelegram(hlsUrl, shiurId) {
   const outputPath = path.join(tempDir, `shiur_${shiurId}.mp4`);
 
   try {
-    // Convert HLS to MP4 (3 minute clip)
+    // Convert HLS to MP4 (full video)
     await convertHlsToMp4(hlsUrl, outputPath);
 
     // Check file size
@@ -95,9 +102,9 @@ export async function prepareVideoForTelegram(hlsUrl, shiurId) {
     console.log(`Video converted: ${(stats.size / 1024 / 1024).toFixed(1)}MB`);
 
     if (stats.size > MAX_VIDEO_SIZE) {
-      console.warn('Video too large, skipping');
+      console.warn(`Video too large for Telegram (${(stats.size / 1024 / 1024).toFixed(1)}MB > 50MB)`);
       await unlinkAsync(outputPath).catch(() => {});
-      return null;
+      return { tooLarge: true, size: stats.size };
     }
 
     return { path: outputPath, size: stats.size };

@@ -67,7 +67,7 @@ async function sendVideoShiur(chatId, nachYomi, shiurId) {
   }
 
   try {
-    const statusMsg = await bot.sendMessage(chatId, '🎬 _Converting video (this may take a moment)..._', { parse_mode: 'Markdown' });
+    const statusMsg = await bot.sendMessage(chatId, '🎬 _Converting video (this may take a few minutes)..._', { parse_mode: 'Markdown' });
 
     const videoUrl = getShiurVideoUrl(shiurId);
     const videoFile = await prepareVideoForTelegram(videoUrl, shiurId);
@@ -75,7 +75,19 @@ async function sendVideoShiur(chatId, nachYomi, shiurId) {
     // Delete status message
     await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
 
-    if (videoFile) {
+    if (videoFile && videoFile.tooLarge) {
+      // Video exceeds Telegram's 50MB limit - provide external link
+      const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
+      await bot.sendMessage(chatId,
+        `🎬 *Video Shiur*\n\n` +
+        `The full video for ${nachYomi.book} ${nachYomi.chapter} exceeds Telegram's 50MB limit.\n\n` +
+        `[Watch on Kol Halashon](${shiurPageUrl})`,
+        { parse_mode: 'Markdown', disable_web_page_preview: true }
+      );
+      return false;
+    }
+
+    if (videoFile && videoFile.path) {
       await bot.sendVideo(chatId, createReadStream(videoFile.path), {
         caption: buildMediaCaption(nachYomi, 'video'),
         parse_mode: 'Markdown',
