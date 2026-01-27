@@ -6,7 +6,7 @@
  */
 
 import { spawn } from 'child_process';
-import { createWriteStream, unlink, stat } from 'fs';
+import { unlink, stat } from 'fs';
 import { promisify } from 'util';
 import path from 'path';
 import os from 'os';
@@ -16,7 +16,7 @@ const statAsync = promisify(stat);
 
 // Telegram limits
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_DURATION = 600; // 10 minutes for initial chunk
+const DEFAULT_DURATION = 120; // 2 minutes - keeps file under 50MB at typical bitrates
 
 /**
  * Check if FFmpeg is available
@@ -31,36 +31,26 @@ export async function checkFfmpeg() {
 
 /**
  * Convert HLS stream to MP4 file
- *
- * @param {string} hlsUrl - The HLS playlist URL
- * @param {string} outputPath - Path for the output MP4 file
- * @param {object} options - Conversion options
- * @returns {Promise<string>} - Path to the converted file
  */
 export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
   const {
-    maxDuration = MAX_DURATION,
-    timeout = 120000, // 2 minutes
+    maxDuration = DEFAULT_DURATION,
+    timeout = 60000, // 1 minute timeout
   } = options;
 
   return new Promise((resolve, reject) => {
     const args = [
-      '-y', // Overwrite output
+      '-y',
       '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
       '-i', hlsUrl,
-      '-c', 'copy', // Copy streams without re-encoding (fastest)
-      '-bsf:a', 'aac_adtstoasc', // Fix AAC bitstream
-      '-movflags', '+faststart', // Enable streaming
+      '-t', String(maxDuration),
+      '-c', 'copy',
+      '-bsf:a', 'aac_adtstoasc',
+      '-movflags', '+faststart',
+      outputPath
     ];
 
-    // Limit duration if specified
-    if (maxDuration) {
-      args.push('-t', String(maxDuration));
-    }
-
-    args.push(outputPath);
-
-    console.log(`Converting HLS to MP4: ${hlsUrl}`);
+    console.log(`Converting HLS to MP4 (${maxDuration}s): ${hlsUrl}`);
     const proc = spawn('ffmpeg', args);
 
     let stderr = '';
@@ -70,7 +60,7 @@ export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
 
     const timer = setTimeout(() => {
       proc.kill('SIGTERM');
-      reject(new Error('FFmpeg conversion timeout'));
+      reject(new Error('FFmpeg timeout'));
     }, timeout);
 
     proc.on('close', (code) => {
@@ -78,7 +68,7 @@ export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
       if (code === 0) {
         resolve(outputPath);
       } else {
-        reject(new Error(`FFmpeg exited with code ${code}: ${stderr.slice(-500)}`));
+        reject(new Error(`FFmpeg error: ${stderr.slice(-200)}`));
       }
     });
 
@@ -91,42 +81,28 @@ export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
 
 /**
  * Download and convert a shiur video for Telegram
- *
- * @param {string} hlsUrl - The HLS playlist URL
- * @param {string} shiurId - The shiur ID for naming
- * @returns {Promise<{path: string, size: number} | null>} - File info or null if too large
  */
 export async function prepareVideoForTelegram(hlsUrl, shiurId) {
   const tempDir = os.tmpdir();
   const outputPath = path.join(tempDir, `shiur_${shiurId}.mp4`);
 
   try {
-    // Check if FFmpeg is available
-    const hasFfmpeg = await checkFfmpeg();
-    if (!hasFfmpeg) {
-      console.warn('FFmpeg not available, skipping video conversion');
-      return null;
-    }
-
-    // Convert HLS to MP4
+    // Convert HLS to MP4 (3 minute clip)
     await convertHlsToMp4(hlsUrl, outputPath);
 
     // Check file size
     const stats = await statAsync(outputPath);
+    console.log(`Video converted: ${(stats.size / 1024 / 1024).toFixed(1)}MB`);
 
     if (stats.size > MAX_VIDEO_SIZE) {
-      console.warn(`Video too large (${(stats.size / 1024 / 1024).toFixed(1)}MB), skipping`);
+      console.warn('Video too large, skipping');
       await unlinkAsync(outputPath).catch(() => {});
       return null;
     }
 
-    return {
-      path: outputPath,
-      size: stats.size
-    };
+    return { path: outputPath, size: stats.size };
   } catch (error) {
     console.error('Video preparation failed:', error.message);
-    // Clean up on failure
     await unlinkAsync(outputPath).catch(() => {});
     return null;
   }
@@ -139,37 +115,6 @@ export async function cleanupVideo(filePath) {
   try {
     await unlinkAsync(filePath);
   } catch (error) {
-    // Ignore cleanup errors
+    // Ignore
   }
-}
-
-/**
- * Get video duration using FFprobe
- */
-export async function getVideoDuration(hlsUrl) {
-  return new Promise((resolve) => {
-    const args = [
-      '-v', 'error',
-      '-show_entries', 'format=duration',
-      '-of', 'default=noprint_wrappers=1:nokey=1',
-      hlsUrl
-    ];
-
-    const proc = spawn('ffprobe', args);
-    let output = '';
-
-    proc.stdout.on('data', (data) => {
-      output += data.toString();
-    });
-
-    proc.on('close', (code) => {
-      if (code === 0 && output.trim()) {
-        resolve(parseFloat(output.trim()));
-      } else {
-        resolve(null);
-      }
-    });
-
-    proc.on('error', () => resolve(null));
-  });
 }
