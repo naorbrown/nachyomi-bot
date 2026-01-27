@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Git
+.git
+.gitignore
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Development
+*.md
+!README.md
+.claude
+scripts
+test-*.js
+assets
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# GitHub
+.github
+
+# OS
+.DS_Store
+Thumbs.db

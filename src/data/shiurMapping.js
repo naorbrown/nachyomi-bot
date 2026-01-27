@@ -1,0 +1,275 @@
+/**
+ * Mapping of Nach books to Kol Halashon shiur IDs for Rav Breitowitz's shiurim
+ *
+ * Data source: https://www2.kolhalashon.com/en/regularSite/ravs/9991
+ *
+ * The Nach Yomi cycle covers all books of Nevi'im (Prophets) and Kesuvim (Writings)
+ * with one chapter per day over a 2-year cycle.
+ */
+
+// Shiur IDs mapped by book and chapter
+// Format: bookName -> { chapterNumber: shiurId }
+export const shiurMapping = {
+  // === NEVI'IM RISHONIM (Early Prophets) ===
+
+  "Joshua": {
+    1: 31470133, 2: 31470135, 3: 31470137, 4: 31470138, 5: 31470139,
+    6: 31472601, 7: 31472602, 8: 31472604, 9: 31472606, 10: 31472607,
+    11: 31574538, 12: 31574542, 13: 31574543, 14: 31574549, 15: 31574550,
+    16: 31576723, 17: 31576724, 18: 31576725, 19: 31576726, 20: 31576727,
+    21: 31576728, 22: 31576729, 23: 31576732, 24: 31576735
+  },
+
+  // Note: The following books need their shiur IDs mapped by scraping the Kol Halashon pages
+  // For now, we'll use null to indicate the shiur exists but needs ID lookup
+  // The bot will fall back to the book's main page when specific shiur ID is not available
+
+  "Judges": {
+    1: 31593902, 2: 31593904, 3: 31593905, 4: 31593906, 5: 31594825,
+    6: 31598992, 7: 31598993, 8: 31598995, 9: 31598998, 10: 31627039,
+    11: 31627040, 12: 31627041, 13: 31627042, 14: 31627043, 15: 31627045,
+    16: 31643376, 17: 31644590, 18: 31644591, 19: 31644611, 20: 31644595,
+    21: 31644596
+  },
+  "I Samuel": { totalChapters: 31, available: true },
+  "II Samuel": { totalChapters: 24, available: true },
+  "I Kings": { totalChapters: 22, available: true },
+  "II Kings": { totalChapters: 25, available: true },
+
+  // === NEVI'IM ACHARONIM (Later Prophets) ===
+
+  "Isaiah": { totalChapters: 66, available: true },
+  "Jeremiah": { totalChapters: 52, available: true },
+  "Ezekiel": { totalChapters: 48, available: true },
+
+  // === TREI ASAR (Twelve Minor Prophets) ===
+
+  "Hosea": { totalChapters: 14, available: true },
+  "Joel": { totalChapters: 4, available: true },
+  "Amos": { totalChapters: 9, available: true },
+  "Obadiah": { totalChapters: 1, available: true },
+  "Jonah": { totalChapters: 4, available: true },
+  "Micah": { totalChapters: 7, available: true },
+  "Nahum": { totalChapters: 3, available: true },
+  "Habakkuk": { totalChapters: 3, available: true },
+  "Zephaniah": { totalChapters: 3, available: true },
+  "Haggai": { totalChapters: 2, available: true },
+  "Zechariah": { totalChapters: 14, available: true },
+  "Malachi": { totalChapters: 3, available: true },
+
+  // === KESUVIM (Writings) ===
+
+  "Psalms": { totalChapters: 150, available: true }, // 155 shiurim (some chapters have multiple)
+  "Proverbs": { totalChapters: 31, available: true },
+  "Job": { totalChapters: 42, available: true },
+  "Song of Songs": { totalChapters: 8, available: true },
+  "Ruth": { totalChapters: 4, available: true },
+  "Lamentations": { totalChapters: 5, available: true },
+  "Ecclesiastes": { totalChapters: 12, available: true },
+  "Esther": { totalChapters: 10, available: true },
+  "Daniel": { totalChapters: 12, available: true },
+  "Ezra": { totalChapters: 10, available: true },
+  "Nehemiah": { totalChapters: 13, available: true },
+  "I Chronicles": { totalChapters: 29, available: true },
+  "II Chronicles": {
+    1: 38417802, 2: 38417803, 3: 38417804, 4: 38419488, 5: 38419569,
+    6: 38419570, 7: 38419571, 8: 38423221, 9: 38423222, 10: 38423223,
+    11: 38436828, 12: 38436829, 13: 38436830, 14: 38436831, 15: 38436832,
+    16: 38441389, 17: 38441390, 18: 38441391, 19: 38445822, 20: 38445823,
+    21: 38445824, 22: 38445846, 23: 38445847, 24: 38465475,
+    25: 38465483, 26: 38465487, 27: 38465512, 28: 38465525, 29: 38488986,
+    30: 38489585, 31: 38489589, 32: 38489591, 33: 38507874, 34: 38507918,
+    35: 38508108, 36: 38512436
+  }
+};
+
+// Name mappings between Hebcal format and our internal format
+export const hebcalToInternal = {
+  "Joshua": "Joshua",
+  "Judges": "Judges",
+  "I Samuel": "I Samuel",
+  "II Samuel": "II Samuel",
+  "I Kings": "I Kings",
+  "II Kings": "II Kings",
+  "Isaiah": "Isaiah",
+  "Jeremiah": "Jeremiah",
+  "Ezekiel": "Ezekiel",
+  "Hosea": "Hosea",
+  "Joel": "Joel",
+  "Amos": "Amos",
+  "Obadiah": "Obadiah",
+  "Jonah": "Jonah",
+  "Micah": "Micah",
+  "Nahum": "Nahum",
+  "Habakkuk": "Habakkuk",
+  "Zephaniah": "Zephaniah",
+  "Haggai": "Haggai",
+  "Zechariah": "Zechariah",
+  "Malachi": "Malachi",
+  "Psalms": "Psalms",
+  "Proverbs": "Proverbs",
+  "Job": "Job",
+  "Song of Songs": "Song of Songs",
+  "Ruth": "Ruth",
+  "Lamentations": "Lamentations",
+  "Ecclesiastes": "Ecclesiastes",
+  "Esther": "Esther",
+  "Daniel": "Daniel",
+  "Ezra": "Ezra",
+  "Nehemiah": "Nehemiah",
+  "I Chronicles": "I Chronicles",
+  "II Chronicles": "II Chronicles"
+};
+
+// Hebrew names for display
+export const hebrewNames = {
+  "Joshua": "יהושע",
+  "Judges": "שופטים",
+  "I Samuel": "שמואל א",
+  "II Samuel": "שמואל ב",
+  "I Kings": "מלכים א",
+  "II Kings": "מלכים ב",
+  "Isaiah": "ישעיהו",
+  "Jeremiah": "ירמיהו",
+  "Ezekiel": "יחזקאל",
+  "Hosea": "הושע",
+  "Joel": "יואל",
+  "Amos": "עמוס",
+  "Obadiah": "עובדיה",
+  "Jonah": "יונה",
+  "Micah": "מיכה",
+  "Nahum": "נחום",
+  "Habakkuk": "חבקוק",
+  "Zephaniah": "צפניה",
+  "Haggai": "חגי",
+  "Zechariah": "זכריה",
+  "Malachi": "מלאכי",
+  "Psalms": "תהלים",
+  "Proverbs": "משלי",
+  "Job": "איוב",
+  "Song of Songs": "שיר השירים",
+  "Ruth": "רות",
+  "Lamentations": "איכה",
+  "Ecclesiastes": "קהלת",
+  "Esther": "אסתר",
+  "Daniel": "דניאל",
+  "Ezra": "עזרא",
+  "Nehemiah": "נחמיה",
+  "I Chronicles": "דברי הימים א",
+  "II Chronicles": "דברי הימים ב"
+};
+
+// Kol Halashon filter IDs for each Nach book (used for searching/filtering)
+export const kolHalashonBookIds = {
+  "Joshua": 288649,
+  "Judges": 288650,
+  "I Samuel": 288651,
+  "II Samuel": 288652,
+  "I Kings": 288653,
+  "II Kings": 288654,
+  "Isaiah": 288655,
+  "Jeremiah": 288656,
+  "Ezekiel": 288657,
+  "Hosea": 288658,
+  "Joel": 288659,
+  "Amos": 288660,
+  "Obadiah": 288661,
+  "Jonah": 288662,
+  "Micah": 288663,
+  "Nahum": 288664,
+  "Habakkuk": 288665,
+  "Zephaniah": 288666,
+  "Haggai": 288667,
+  "Zechariah": 288668,
+  "Malachi": 288669,
+  "Psalms": 288670,
+  "Proverbs": 288671,
+  "Job": 288672,
+  "Song of Songs": 288673,
+  "Ruth": 288674,
+  "Lamentations": 288675,
+  "Ecclesiastes": 288676,
+  "Esther": 288677,
+  "Daniel": 288678,
+  "Ezra": 288679,
+  "Nehemiah": 288680,
+  "I Chronicles": 288681,
+  "II Chronicles": 288682
+};
+
+/**
+ * Get the Kol Halashon shiur URL for a specific chapter
+ */
+export function getShiurUrl(book, chapter) {
+  const bookData = shiurMapping[book];
+
+  if (bookData && typeof bookData === 'object' && bookData[chapter]) {
+    // We have a specific shiur ID
+    return `https://www2.kolhalashon.com/en/regularSite/playShiur/${bookData[chapter]}`;
+  }
+
+  // Fallback to Rav Breitowitz's Nach page with book filter
+  const bookId = kolHalashonBookIds[book];
+  if (bookId) {
+    return `https://www2.kolhalashon.com/en/regularSite/ravs/9991?urlFilters=26:${bookId}|`;
+  }
+
+  // Ultimate fallback - Rav Breitowitz's main Nach page
+  return "https://www2.kolhalashon.com/en/regularSite/ravs/9991?urlFilters=25:288648|";
+}
+
+/**
+ * Get Sefaria URL for the chapter text
+ */
+export function getSefariaUrl(book, chapter) {
+  const sefariaBook = book.replace(/ /g, "_");
+  return `https://www.sefaria.org/${sefariaBook}.${chapter}`;
+}
+
+/**
+ * Get Sefaria API URL for fetching text
+ */
+export function getSefariaApiUrl(book, chapter) {
+  const sefariaBook = book.replace(/ /g, "_");
+  return `https://www.sefaria.org/api/texts/${sefariaBook}.${chapter}?context=0&pad=0`;
+}
+
+/**
+ * Get the shiur ID for a specific book and chapter
+ */
+export function getShiurId(book, chapter) {
+  const bookData = shiurMapping[book];
+  if (bookData && typeof bookData === 'object' && bookData[chapter]) {
+    return bookData[chapter];
+  }
+  return null;
+}
+
+/**
+ * Get the thumbnail URL for a shiur
+ */
+export function getShiurThumbnailUrl(shiurId) {
+  if (!shiurId) return null;
+  // Thumbnail URL pattern: /imgs/VideoThumbNails/{first5digits}/{shiurId}.jpg
+  const prefix = String(shiurId).substring(0, 5);
+  return `https://www2.kolhalashon.com/imgs/VideoThumbNails/${prefix}/${shiurId}.jpg`;
+}
+
+/**
+ * Get the MP3 audio URL for a shiur (for embedding in Telegram)
+ * This URL is used in the "Listen" mode of Kol Halashon
+ */
+export function getShiurAudioUrl(shiurId) {
+  if (!shiurId) return null;
+  return `https://www2.kolhalashon.com/api/files/GetMp3FileToPlay/${shiurId}`;
+}
+
+/**
+ * Get the HLS video stream URL for a shiur
+ * Pattern: https://media2.kolhalashon.com:9001/KHL_Video/_definst_/amlst:NewArchive/HD/{prefix}/{shiurId}/playlist.m3u8
+ */
+export function getShiurVideoUrl(shiurId) {
+  if (!shiurId) return null;
+  const prefix = String(shiurId).substring(0, 5);
+  return `https://media2.kolhalashon.com:9001/KHL_Video/_definst_/amlst:NewArchive/HD/${prefix}/${shiurId}/playlist.m3u8`;
+}

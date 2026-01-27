@@ -1,0 +1,42 @@
+{
+  "name": "nachyomi-bot",
+  "version": "1.0.0",
+  "description": "Daily Nach Yomi with Rav Breitowitz shiurim from Kol Halashon",
+  "main": "src/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node test-apis.js"
+  },
+  "keywords": [
+    "nach-yomi",
+    "telegram-bot",
+    "torah",
+    "kol-halashon",
+    "breitowitz",
+    "jewish",
+    "navi",
+    "kesuvim"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/nachyomi-bot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/nachyomi-bot/issues"
+  },
+  "dependencies": {
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
+}

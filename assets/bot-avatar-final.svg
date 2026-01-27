@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Deep indigo to royal blue - premium feel -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e3a8a"/>
+    </linearGradient>
+
+    <!-- Rich gold gradient -->
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fde047"/>
+      <stop offset="100%" style="stop-color:#ca8a04"/>
+    </linearGradient>
+
+    <!-- Warm parchment -->
+    <linearGradient id="parchment" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fefce8"/>
+      <stop offset="100%" style="stop-color:#fef3c7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="url(#bg)"/>
+
+  <!-- Subtle decorative ring -->
+  <circle cx="256" cy="256" r="240" fill="none" stroke="url(#gold)" stroke-width="3" opacity="0.3"/>
+  <circle cx="256" cy="256" r="230" fill="none" stroke="url(#gold)" stroke-width="1" opacity="0.15"/>
+
+  <!-- Torah scroll - centered and prominent -->
+  <g transform="translate(256, 256)">
+    <!-- Scroll parchment - main body -->
+    <rect x="-90" y="-110" width="180" height="220" rx="8" fill="url(#parchment)" stroke="#d97706" stroke-width="3"/>
+
+    <!-- Scroll rolls (atzei chaim) -->
+    <g fill="#fef3c7" stroke="#92400e" stroke-width="2">
+      <!-- Left roll -->
+      <ellipse cx="-90" cy="-110" rx="18" ry="25"/>
+      <ellipse cx="-90" cy="110" rx="18" ry="25"/>
+      <rect x="-100" y="-140" width="20" height="15" rx="3" fill="#78350f" stroke="none"/>
+      <rect x="-100" y="125" width="20" height="15" rx="3" fill="#78350f" stroke="none"/>
+
+      <!-- Right roll -->
+      <ellipse cx="90" cy="-110" rx="18" ry="25"/>
+      <ellipse cx="90" cy="110" rx="18" ry="25"/>
+      <rect x="80" y="-140" width="20" height="15" rx="3" fill="#78350f" stroke="none"/>
+      <rect x="80" y="125" width="20" height="15" rx="3" fill="#78350f" stroke="none"/>
+    </g>
+
+    <!-- Large Hebrew Nun - symbol for Nach/Nevi'im -->
+    <text x="0" y="25"
+          font-family="serif"
+          font-size="130"
+          fill="#1e3a8a"
+          text-anchor="middle"
+          font-weight="bold">נ</text>
+
+    <!-- Text lines on scroll -->
+    <g stroke="#c2a66b" stroke-width="2.5" stroke-linecap="round" opacity="0.7">
+      <line x1="-55" y1="60" x2="55" y2="60"/>
+      <line x1="-45" y1="80" x2="45" y2="80"/>
+      <line x1="-35" y1="100" x2="35" y2="100"/>
+    </g>
+  </g>
+
+  <!-- Crown (Keter Torah) at top -->
+  <g transform="translate(256, 75)">
+    <path d="M -45 25 L -32 -5 L -15 15 L 0 -20 L 15 15 L 32 -5 L 45 25 Z"
+          fill="url(#gold)" stroke="#a16207" stroke-width="2"/>
+    <!-- Crown gems -->
+    <circle cx="0" cy="-12" r="7" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+    <circle cx="-30" cy="0" r="5" fill="#2563eb" stroke="#1d4ed8" stroke-width="1"/>
+    <circle cx="30" cy="0" r="5" fill="#16a34a" stroke="#15803d" stroke-width="1"/>
+  </g>
+
+  <!-- "NACH YOMI" ribbon banner at bottom -->
+  <g transform="translate(256, 450)">
+    <path d="M -130 -18 L -110 0 L -130 18 L 130 18 L 110 0 L 130 -18 Z"
+          fill="url(#gold)" stroke="#a16207" stroke-width="2"/>
+    <text x="0" y="7"
+          font-family="Georgia, serif"
+          font-size="24"
+          fill="#0f172a"
+          text-anchor="middle"
+          font-weight="bold"
+          letter-spacing="2">NACH YOMI</text>
+  </g>
+
+  <!-- Decorative corner stars -->
+  <g fill="url(#gold)" opacity="0.5">
+    <polygon points="75,75 78,83 86,83 80,88 82,96 75,91 68,96 70,88 64,83 72,83"/>
+    <polygon points="437,75 440,83 448,83 442,88 444,96 437,91 430,96 432,88 426,83 434,83"/>
+    <polygon points="75,437 78,445 86,445 80,450 82,458 75,453 68,458 70,450 64,445 72,445"/>
+    <polygon points="437,437 440,445 448,445 442,450 444,458 437,453 430,458 432,450 426,445 434,445"/>
+  </g>
+</svg>
