@@ -113,76 +113,19 @@ export function buildMediaKeyboard(book, chapter) {
 }
 
 /**
- * Build a welcome message for new users
+ * Build welcome message for new users
  */
 export function buildWelcomeMessage() {
-  return `📖 *Nach Yomi Bot*
+  return `📖 *Nach Yomi*
 
-Daily Nach chapter with Rav Breitowitz's shiurim from Kol Halashon.
+Daily chapter with Rav Breitowitz's shiurim.
 
-*What you'll receive:*
-• 🎬 Full video shiur
-• 🎧 Full audio shiur
-• 📜 Complete Hebrew + English text
+/start — Full chapter (video + audio + text)
+/video — Video only
+/audio — Audio only
+/text — Text only
 
-_One chapter of Nevi'im or Kesuvim each day._
-
-Type /help for all commands.`;
-}
-
-/**
- * Build help message with all commands
- */
-export function buildHelpMessage() {
-  return `*Nach Yomi Bot Commands*
-
-*Daily Content*
-/today — Today's chapter (video + audio + text)
-/tomorrow — Preview tomorrow's chapter
-
-*Media Options*
-/video — Video shiur only
-/audio — Audio shiur only
-/text — Text only (no media)
-
-*Information*
-/about — About this bot and sources
-/help — Show this help message
-
-*Tips*
-• Full video shiurim are embedded (split into parts if over 50MB)
-• Audio is the complete shiur
-• Text includes Hebrew with English translation
-
-_Bot posts daily at 6:00 AM Israel time._`;
-}
-
-/**
- * Build the about message
- */
-export function buildAboutMessage() {
-  return `*Nach Yomi Bot*
-
-Daily Nach Yomi with shiurim by Harav Yitzchok Breitowitz שליט״א from Kol Halashon.
-
-*Features*
-• 🎬 Full video shiurim (split into parts for long shiurim)
-• 🎧 Full audio shiurim
-• 📜 Complete Hebrew + English text
-• ⏰ Daily posts at 6:00 AM Israel
-
-*Data Sources*
-• [Hebcal](https://hebcal.com) — Nach Yomi schedule
-• [Kol Halashon](https://kolhalashon.com) — Shiurim
-• [Sefaria](https://sefaria.org) — Text & translations
-
-*About Rav Breitowitz*
-Rav of Kehillat Ohr Somayach, Jerusalem. World-renowned for his depth, clarity, and practical wisdom in Torah and Halacha.
-
-*Open Source*
-[GitHub Repository](https://github.com/naorbrown/nachyomi-bot)
-
-_לעילוי נשמת כל לומדי התורה_`;
+_Posts daily at 6 AM Israel time._`;
 }
 
 /**

@@ -72,14 +72,10 @@ The Docker image includes FFmpeg automatically.
 
 | Command | Description |
 |---------|-------------|
-| `/start` | Welcome message + today's chapter |
-| `/today` | Today's Nach Yomi (video + audio + text) |
-| `/tomorrow` | Tomorrow's chapter preview |
+| `/start` | Today's chapter (video + audio + text) |
 | `/video` | Video shiur only |
 | `/audio` | Audio shiur only |
-| `/text` | Text only (no media) |
-| `/help` | Show all commands |
-| `/about` | About the bot and sources |
+| `/text` | Text only |
 
 ## Configuration
 

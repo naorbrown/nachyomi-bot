@@ -5,30 +5,24 @@
  * Features: Embedded video + audio, full Hebrew + English text
  *
  * Commands:
- *   /start    - Welcome message and today's chapter
- *   /today    - Today's Nach Yomi chapter
- *   /tomorrow - Tomorrow's chapter preview
- *   /video    - Get video shiur for today
- *   /audio    - Get audio shiur for today
- *   /text     - Get text only (no media)
- *   /help     - Show all commands
- *   /about    - About this bot and sources
+ *   /start - Today's chapter (video + audio + text)
+ *   /video - Video shiur only
+ *   /audio - Audio shiur only
+ *   /text  - Text only
  */
 
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
 import cron from 'node-cron';
 import { createReadStream } from 'fs';
-import { getTodaysNachYomi, getNachYomiForDate } from './hebcalService.js';
+import { getTodaysNachYomi } from './hebcalService.js';
 import { getChapterText } from './sefariaService.js';
 import {
   buildDailyMessages,
   buildKeyboard,
   buildMediaCaption,
   buildMediaKeyboard,
-  buildWelcomeMessage,
-  buildAboutMessage,
-  buildHelpMessage
+  buildWelcomeMessage
 } from './messageBuilder.js';
 import { getShiurId, getShiurAudioUrl, getShiurVideoUrl, getShiurUrl } from './data/shiurMapping.js';
 import { prepareVideoForTelegram, cleanupVideo, cleanupVideoParts, checkFfmpeg } from './videoService.js';
@@ -268,51 +262,13 @@ async function sendDailyNachYomi(chatId, options = {}) {
 // COMMAND HANDLERS
 // ============================================
 
-// /start - Welcome + Today's chapter
+// /start - Today's chapter (video + audio + text)
 bot.onText(/\/start/, async (msg) => {
   try {
     await bot.sendMessage(msg.chat.id, buildWelcomeMessage(), { parse_mode: 'Markdown' });
     await sendDailyNachYomi(msg.chat.id);
   } catch (err) {
-    await bot.sendMessage(msg.chat.id, '❌ Error loading chapter. Try /today');
-  }
-});
-
-// /today - Today's Nach Yomi (video + audio + text)
-bot.onText(/\/today/, async (msg) => {
-  try {
-    await sendDailyNachYomi(msg.chat.id);
-  } catch (err) {
-    await bot.sendMessage(msg.chat.id, '❌ Error fetching Nach Yomi. Please try again.');
-  }
-});
-
-// /tomorrow - Tomorrow's chapter preview
-bot.onText(/\/tomorrow/, async (msg) => {
-  try {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const nachYomi = await getNachYomiForDate(tomorrow);
-
-    if (!nachYomi) {
-      await bot.sendMessage(msg.chat.id, 'Could not find tomorrow\'s Nach Yomi.');
-      return;
-    }
-
-    const chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null }).catch(() => null);
-    const messages = buildDailyMessages(nachYomi, chapterText);
-    messages[0] = `📅 *Tomorrow's Nach Yomi*\n\n` + messages[0];
-
-    for (let i = 0; i < messages.length; i++) {
-      const isLastMessage = i === messages.length - 1;
-      await bot.sendMessage(msg.chat.id, messages[i], {
-        parse_mode: 'Markdown',
-        reply_markup: isLastMessage ? buildKeyboard(nachYomi.book, nachYomi.chapter) : undefined,
-        disable_web_page_preview: true
-      });
-    }
-  } catch (err) {
-    await bot.sendMessage(msg.chat.id, '❌ Error fetching tomorrow\'s chapter.');
+    await bot.sendMessage(msg.chat.id, '❌ Error loading chapter. Please try again.');
   }
 });
 
@@ -338,7 +294,7 @@ bot.onText(/\/audio/, async (msg) => {
   }
 });
 
-// /text - Text only (no media)
+// /text - Text only
 bot.onText(/\/text/, async (msg) => {
   try {
     const nachYomi = await getTodaysNachYomi();
@@ -347,16 +303,6 @@ bot.onText(/\/text/, async (msg) => {
   } catch (err) {
     await bot.sendMessage(msg.chat.id, '❌ Error fetching text.');
   }
-});
-
-// /help - Show all commands
-bot.onText(/\/help/, async (msg) => {
-  await bot.sendMessage(msg.chat.id, buildHelpMessage(), { parse_mode: 'Markdown' });
-});
-
-// /about - About the bot
-bot.onText(/\/about/, async (msg) => {
-  await bot.sendMessage(msg.chat.id, buildAboutMessage(), { parse_mode: 'Markdown' });
 });
 
 // /broadcast - Admin only: send to channel
