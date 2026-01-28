@@ -43,8 +43,18 @@ let ffmpegAvailable = false;
 // Initialize
 (async () => {
   ffmpegAvailable = await checkFfmpeg();
+
+  // Set bot commands programmatically
+  await bot.setMyCommands([
+    { command: 'start', description: "Today's chapter (video + audio + text)" },
+    { command: 'video', description: 'Video shiur only' },
+    { command: 'audio', description: 'Audio shiur only' },
+    { command: 'text', description: 'Text only' }
+  ]);
+
   console.log('Nach Yomi Bot started');
   console.log(`FFmpeg: ${ffmpegAvailable ? 'yes' : 'no'}`);
+  console.log('Commands registered');
 })();
 
 /**
