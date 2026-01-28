@@ -5,7 +5,8 @@
  * Features: Embedded video + audio, full Hebrew + English text
  *
  * Commands:
- *   /start - Get today's shiur (video + audio + text)
+ *   /today - Get today's Nach Yomi (video + audio + text)
+ *   /start - Same as /today
  *   /video - Watch the video shiur
  *   /audio - Listen to the audio shiur
  *   /text  - Read the chapter
@@ -75,6 +76,7 @@ function isRateLimited(chatId) {
 
   // Set bot commands programmatically
   await bot.setMyCommands([
+    { command: 'today', description: "Get today's Nach Yomi" },
     { command: 'start', description: "Get today's shiur" },
     { command: 'video', description: 'Watch the video shiur' },
     { command: 'audio', description: 'Listen to the audio shiur' },
@@ -339,7 +341,8 @@ bot.on('message', async (msg) => {
 
   try {
     switch (command) {
-      case 'start': {
+      case 'start':
+      case 'today': {
         await bot.sendMessage(chatId, buildWelcomeMessage(), { parse_mode: 'Markdown' });
         await sendDailyNachYomi(chatId);
         break;
@@ -390,6 +393,7 @@ bot.on('message', async (msg) => {
 
     const errorMessages = {
       start: '❌ Error loading chapter. Please try again.',
+      today: '❌ Error loading chapter. Please try again.',
       video: `❌ Error: ${err.message}`,
       audio: `❌ Error: ${err.message}`,
       text: '❌ Error fetching text.',
