@@ -59,17 +59,6 @@ Before submitting:
 3. Verify audio embedding works
 4. Check error handling
 
-## Shiur ID Mapping
-
-To add shiur IDs for unmapped books:
-
-1. Visit [Kol Halashon](https://kolhalashon.com)
-2. Navigate to Rav Breitowitz's Nach shiurim
-3. Extract shiur IDs from URLs
-4. Update `src/data/shiurMapping.js`
-
-See `scripts/scrapeShiurIds.js` for automation.
-
 ## Questions
 
 Open an issue for questions about contributing.
