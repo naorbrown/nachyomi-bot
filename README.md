@@ -2,32 +2,30 @@
 
 # Nach Yomi Bot
 
-**Daily Nach chapter with Rav Breitowitz's full shiurim, delivered to Telegram.**
+**One chapter of Nach. Every day. With Rav Breitowitz.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org)
 [![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-blue.svg)](https://t.me/NachYomi_Bot)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](Dockerfile)
 
-[**Try the Bot**](https://t.me/NachYomi_Bot) · [Report Bug](https://github.com/naorbrown/nachyomi-bot/issues) · [Request Feature](https://github.com/naorbrown/nachyomi-bot/issues)
+[**Start Learning**](https://t.me/NachYomi_Bot) · [Report Bug](https://github.com/naorbrown/nachyomi-bot/issues) · [Request Feature](https://github.com/naorbrown/nachyomi-bot/issues)
 
 </div>
 
 ---
 
-## Overview
+## What is Nach Yomi?
 
-Nach Yomi Bot delivers the daily Nach Yomi chapter directly to Telegram with **full embedded video and audio** shiurim by Harav Yitzchok Breitowitz שליט״א from Kol Halashon. One chapter of Nevi'im or Kesuvim, every day.
+Nach Yomi is the daily study of Nevi'im (Prophets) and Ketuvim (Writings) — one chapter per day, completing all 929 chapters in about 2.5 years. This bot delivers each day's chapter with **full video and audio shiurim** by Harav Yitzchok Breitowitz שליט״א embedded directly in Telegram.
 
-### Features
+### Why Use This Bot?
 
-| Feature | Description |
-|---------|-------------|
-| **Full Video Shiurim** | Complete video lectures embedded in Telegram (auto-split if over 50MB) |
-| **Full Audio Shiurim** | Complete audio shiurim without leaving Telegram |
-| **Full Text** | Complete Hebrew verses with English translation |
-| **Daily Schedule** | Follows the official Hebcal Nach Yomi calendar |
-| **Channel Support** | Scheduled posts at 6:00 AM Israel time |
+- **Watch** — Full video shiurim embedded in Telegram (auto-split if over 50MB)
+- **Listen** — Complete audio shiurim without leaving the app
+- **Read** — Full Hebrew text with English translation (Sefaria)
+- **Daily** — Follows the official Nach Yomi calendar, posts at 6 AM Israel time
+- **929 chapters** — 100% shiur coverage for all of Nach
 
 ## Deploy Your Own
 
@@ -329,10 +327,10 @@ See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 ## Acknowledgments
 
-- **Harav Yitzchok Breitowitz שליט״א** for his inspiring shiurim
-- [Kol Halashon](https://kolhalashon.com) for hosting Torah content
-- [Hebcal](https://hebcal.com) for the Nach Yomi schedule API
-- [Sefaria](https://sefaria.org) for text and translations
+- **Harav Yitzchok Breitowitz שליט״א** — The shiurim that make this bot possible
+- **[Kol Halashon](https://kolhalashon.com)** — Preserving and sharing Torah worldwide
+- **[Hebcal](https://hebcal.com)** — Nach Yomi calendar API
+- **[Sefaria](https://sefaria.org)** — Open-source texts and translations
 
 ---
 
@@ -340,6 +338,6 @@ See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 _לעילוי נשמת כל לומדי התורה_
 
-**[Try @NachYomi_Bot on Telegram](https://t.me/NachYomi_Bot)**
+**[Start learning with @NachYomi_Bot](https://t.me/NachYomi_Bot)**
 
 </div>
