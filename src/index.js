@@ -311,14 +311,26 @@ async function sendDailyNachYomi(chatId, options = {}) {
 function parseCommand(text) {
   if (!text || typeof text !== 'string') return null;
 
-  // Match /command or /command@botname at start, with optional params
-  const match = text.match(/^\/([a-zA-Z0-9_]+)(?:@[a-zA-Z0-9_]+)?(?:\s+(.*))?$/);
-  if (!match) return null;
+  // Trim whitespace and newlines
+  const trimmed = text.trim();
 
-  return {
-    command: match[1].toLowerCase(),
-    params: match[2] || ''
-  };
+  // Must start with /
+  if (!trimmed.startsWith('/')) return null;
+
+  // Extract command: /command or /command@botname
+  const spaceIndex = trimmed.indexOf(' ');
+  const commandPart = spaceIndex > 0 ? trimmed.slice(0, spaceIndex) : trimmed;
+  const params = spaceIndex > 0 ? trimmed.slice(spaceIndex + 1).trim() : '';
+
+  // Parse command name (remove / and optional @botname)
+  const atIndex = commandPart.indexOf('@');
+  const command = atIndex > 0
+    ? commandPart.slice(1, atIndex).toLowerCase()
+    : commandPart.slice(1).toLowerCase();
+
+  if (!command) return null;
+
+  return { command, params };
 }
 
 // Single message handler for all commands
