@@ -118,14 +118,14 @@ export function buildMediaKeyboard(book, chapter) {
 export function buildWelcomeMessage() {
   return `📖 *Nach Yomi*
 
-Daily chapter with Rav Breitowitz's shiurim.
+One chapter. Every day. With Rav Breitowitz.
 
-/start — Full chapter (video + audio + text)
-/video — Video only
-/audio — Audio only
-/text — Text only
+/start — Today's shiur
+/video — Watch
+/audio — Listen
+/text — Read
 
-_Posts daily at 6 AM Israel time._`;
+_New chapter daily at 6 AM Israel._`;
 }
 
 /**

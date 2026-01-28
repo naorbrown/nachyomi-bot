@@ -72,10 +72,10 @@ The Docker image includes FFmpeg automatically.
 
 | Command | Description |
 |---------|-------------|
-| `/start` | Today's chapter (video + audio + text) |
-| `/video` | Video shiur only |
-| `/audio` | Audio shiur only |
-| `/text` | Text only |
+| `/start` | Get today's shiur (video + audio + text) |
+| `/video` | Watch the video shiur |
+| `/audio` | Listen to the audio shiur |
+| `/text` | Read the chapter |
 
 ## Configuration
 

@@ -5,10 +5,10 @@
  * Features: Embedded video + audio, full Hebrew + English text
  *
  * Commands:
- *   /start - Today's chapter (video + audio + text)
- *   /video - Video shiur only
- *   /audio - Audio shiur only
- *   /text  - Text only
+ *   /start - Get today's shiur (video + audio + text)
+ *   /video - Watch the video shiur
+ *   /audio - Listen to the audio shiur
+ *   /text  - Read the chapter
  */
 
 import 'dotenv/config';
@@ -46,10 +46,10 @@ let ffmpegAvailable = false;
 
   // Set bot commands programmatically
   await bot.setMyCommands([
-    { command: 'start', description: "Today's chapter (video + audio + text)" },
-    { command: 'video', description: 'Video shiur only' },
-    { command: 'audio', description: 'Audio shiur only' },
-    { command: 'text', description: 'Text only' }
+    { command: 'start', description: "Get today's shiur" },
+    { command: 'video', description: 'Watch the video shiur' },
+    { command: 'audio', description: 'Listen to the audio shiur' },
+    { command: 'text', description: 'Read the chapter' }
   ]);
 
   console.log('Nach Yomi Bot started');
