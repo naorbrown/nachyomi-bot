@@ -375,18 +375,45 @@ bot.onText(/\/broadcast/, async (msg) => {
 // SCHEDULED TASKS
 // ============================================
 
-// Daily post at 6:00 AM Israel time (4:00 UTC)
-if (CHANNEL_ID) {
-  cron.schedule('0 4 * * *', () => {
-    console.log('Running scheduled broadcast...');
-    sendDailyNachYomi(CHANNEL_ID).catch(err => {
-      console.error('Scheduled broadcast failed:', err.message);
+/**
+ * Execute scheduled broadcast with retry logic
+ */
+async function runScheduledBroadcast() {
+  const MAX_RETRIES = 3;
+  const RETRY_DELAYS = [30000, 60000, 120000]; // 30s, 1m, 2m
+
+  console.log(`[${new Date().toISOString()}] Running scheduled broadcast...`);
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await sendDailyNachYomi(CHANNEL_ID);
+      console.log(`[${new Date().toISOString()}] Scheduled broadcast completed successfully`);
       if (ADMIN_CHAT_ID) {
-        bot.sendMessage(ADMIN_CHAT_ID, `❌ Scheduled broadcast failed: ${err.message}`).catch(() => {});
+        bot.sendMessage(ADMIN_CHAT_ID, `✅ Daily broadcast sent successfully`).catch(() => {});
       }
-    });
-  }, { timezone: 'UTC' });
-  console.log(`Scheduled daily post to ${CHANNEL_ID} at 6:00 AM Israel`);
+      return; // Success - exit retry loop
+    } catch (err) {
+      console.error(`[${new Date().toISOString()}] Broadcast attempt ${attempt}/${MAX_RETRIES} failed:`, err.message);
+
+      if (attempt < MAX_RETRIES) {
+        const delay = RETRY_DELAYS[attempt - 1];
+        console.log(`Retrying in ${delay / 1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        // All retries exhausted
+        console.error(`[${new Date().toISOString()}] All broadcast attempts failed`);
+        if (ADMIN_CHAT_ID) {
+          bot.sendMessage(ADMIN_CHAT_ID, `❌ Scheduled broadcast failed after ${MAX_RETRIES} attempts: ${err.message}`).catch(() => {});
+        }
+      }
+    }
+  }
+}
+
+// Daily post at 6:00 AM Israel time (handles DST automatically)
+if (CHANNEL_ID) {
+  cron.schedule('0 6 * * *', runScheduledBroadcast, { timezone: 'Asia/Jerusalem' });
+  console.log(`Scheduled daily post to ${CHANNEL_ID} at 6:00 AM Israel (Asia/Jerusalem timezone)`);
 }
 
 // ============================================
