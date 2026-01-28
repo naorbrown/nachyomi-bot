@@ -301,8 +301,15 @@ async function sendDailyNachYomi(chatId, options = {}) {
 // COMMAND HANDLERS
 // ============================================
 
+// Command regex patterns - handle @botname suffix in groups
+const CMD_START = /^\/start(?:@\w+)?(?:\s|$)/;
+const CMD_VIDEO = /^\/video(?:@\w+)?(?:\s|$)/;
+const CMD_AUDIO = /^\/audio(?:@\w+)?(?:\s|$)/;
+const CMD_TEXT = /^\/text(?:@\w+)?(?:\s|$)/;
+const CMD_BROADCAST = /^\/broadcast(?:@\w+)?(?:\s|$)/;
+
 // /start - Today's chapter (video + audio + text)
-bot.onText(/\/start/, async (msg) => {
+bot.onText(CMD_START, async (msg) => {
   if (isRateLimited(msg.chat.id)) {
     return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
   }
@@ -310,12 +317,13 @@ bot.onText(/\/start/, async (msg) => {
     await bot.sendMessage(msg.chat.id, buildWelcomeMessage(), { parse_mode: 'Markdown' });
     await sendDailyNachYomi(msg.chat.id);
   } catch (err) {
+    console.error('Start command failed:', err.message);
     await bot.sendMessage(msg.chat.id, '❌ Error loading chapter. Please try again.');
   }
 });
 
 // /video - Video shiur only
-bot.onText(/\/video/, async (msg) => {
+bot.onText(CMD_VIDEO, async (msg) => {
   if (isRateLimited(msg.chat.id)) {
     return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
   }
@@ -324,12 +332,13 @@ bot.onText(/\/video/, async (msg) => {
     const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
     await sendVideoShiur(msg.chat.id, nachYomi, shiurId);
   } catch (err) {
+    console.error('Video command failed:', err.message);
     await bot.sendMessage(msg.chat.id, `❌ Error: ${err.message}`);
   }
 });
 
 // /audio - Audio shiur only
-bot.onText(/\/audio/, async (msg) => {
+bot.onText(CMD_AUDIO, async (msg) => {
   if (isRateLimited(msg.chat.id)) {
     return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
   }
@@ -338,12 +347,13 @@ bot.onText(/\/audio/, async (msg) => {
     const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
     await sendAudioShiur(msg.chat.id, nachYomi, shiurId);
   } catch (err) {
+    console.error('Audio command failed:', err.message);
     await bot.sendMessage(msg.chat.id, `❌ Error: ${err.message}`);
   }
 });
 
 // /text - Text only
-bot.onText(/\/text/, async (msg) => {
+bot.onText(CMD_TEXT, async (msg) => {
   if (isRateLimited(msg.chat.id)) {
     return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
   }
@@ -352,12 +362,13 @@ bot.onText(/\/text/, async (msg) => {
     const chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null }).catch(() => null);
     await sendChapterText(msg.chat.id, nachYomi, chapterText);
   } catch (err) {
+    console.error('Text command failed:', err.message);
     await bot.sendMessage(msg.chat.id, '❌ Error fetching text.');
   }
 });
 
 // /broadcast - Admin only: send to channel
-bot.onText(/\/broadcast/, async (msg) => {
+bot.onText(CMD_BROADCAST, async (msg) => {
   if (ADMIN_CHAT_ID && msg.chat.id.toString() !== ADMIN_CHAT_ID) return;
   if (!CHANNEL_ID) {
     await bot.sendMessage(msg.chat.id, 'No channel configured.');
@@ -367,6 +378,7 @@ bot.onText(/\/broadcast/, async (msg) => {
     await sendDailyNachYomi(CHANNEL_ID);
     await bot.sendMessage(msg.chat.id, '✅ Broadcast sent.');
   } catch (err) {
+    console.error('Broadcast command failed:', err.message);
     await bot.sendMessage(msg.chat.id, `❌ Broadcast failed: ${err.message}`);
   }
 });
