@@ -47,5 +47,9 @@ const token = "your-token";  // Never do this
 ## Known Limitations
 
 - Bot token provides full bot access
-- No rate limiting implemented (relies on Telegram's limits)
 - External API calls (Hebcal, Sefaria, Kol Halashon) are not authenticated
+
+## Abuse Prevention
+
+- Rate limiting: 5 requests per minute per user
+- Automatic cleanup of rate limit data to prevent memory leaks

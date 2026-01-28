@@ -29,9 +29,19 @@ Nach Yomi Bot delivers the daily Nach Yomi chapter directly to Telegram with **f
 | **Daily Schedule** | Follows the official Hebcal Nach Yomi calendar |
 | **Channel Support** | Scheduled posts at 6:00 AM Israel time |
 
-## Quick Start
+## Deploy Your Own
 
-### Option 1: Docker (Recommended)
+### Option 1: Railway (Free, Recommended)
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/nachyomi?referralCode=nachyomi)
+
+1. Click the button above
+2. Add your `TELEGRAM_BOT_TOKEN` (get one from [@BotFather](https://t.me/BotFather))
+3. Deploy — that's it!
+
+Railway's free tier (500 hours/month) is plenty for this bot.
+
+### Option 2: Docker
 
 ```bash
 docker run -d \
@@ -41,7 +51,7 @@ docker run -d \
   ghcr.io/naorbrown/nachyomi-bot:latest
 ```
 
-### Option 2: Node.js
+### Option 3: Node.js
 
 ```bash
 git clone https://github.com/naorbrown/nachyomi-bot.git

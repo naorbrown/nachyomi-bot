@@ -40,6 +40,35 @@ if (!BOT_TOKEN) {
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 let ffmpegAvailable = false;
 
+// Rate limiting: 5 requests per minute per user
+const rateLimits = new Map();
+const RATE_LIMIT = 5;
+const RATE_WINDOW = 60000; // 1 minute
+
+function isRateLimited(chatId) {
+  const now = Date.now();
+  const userHistory = rateLimits.get(chatId) || [];
+  const recentRequests = userHistory.filter(t => now - t < RATE_WINDOW);
+
+  if (recentRequests.length >= RATE_LIMIT) {
+    return true;
+  }
+
+  recentRequests.push(now);
+  rateLimits.set(chatId, recentRequests);
+
+  // Cleanup old entries periodically
+  if (rateLimits.size > 1000) {
+    for (const [id, times] of rateLimits) {
+      if (times.every(t => now - t > RATE_WINDOW)) {
+        rateLimits.delete(id);
+      }
+    }
+  }
+
+  return false;
+}
+
 // Initialize
 (async () => {
   ffmpegAvailable = await checkFfmpeg();
@@ -274,6 +303,9 @@ async function sendDailyNachYomi(chatId, options = {}) {
 
 // /start - Today's chapter (video + audio + text)
 bot.onText(/\/start/, async (msg) => {
+  if (isRateLimited(msg.chat.id)) {
+    return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
+  }
   try {
     await bot.sendMessage(msg.chat.id, buildWelcomeMessage(), { parse_mode: 'Markdown' });
     await sendDailyNachYomi(msg.chat.id);
@@ -284,6 +316,9 @@ bot.onText(/\/start/, async (msg) => {
 
 // /video - Video shiur only
 bot.onText(/\/video/, async (msg) => {
+  if (isRateLimited(msg.chat.id)) {
+    return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
+  }
   try {
     const nachYomi = await getTodaysNachYomi();
     const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
@@ -295,6 +330,9 @@ bot.onText(/\/video/, async (msg) => {
 
 // /audio - Audio shiur only
 bot.onText(/\/audio/, async (msg) => {
+  if (isRateLimited(msg.chat.id)) {
+    return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
+  }
   try {
     const nachYomi = await getTodaysNachYomi();
     const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
@@ -306,6 +344,9 @@ bot.onText(/\/audio/, async (msg) => {
 
 // /text - Text only
 bot.onText(/\/text/, async (msg) => {
+  if (isRateLimited(msg.chat.id)) {
+    return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
+  }
   try {
     const nachYomi = await getTodaysNachYomi();
     const chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null }).catch(() => null);
