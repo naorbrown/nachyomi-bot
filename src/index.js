@@ -301,85 +301,102 @@ async function sendDailyNachYomi(chatId, options = {}) {
 // COMMAND HANDLERS
 // ============================================
 
-// Command regex patterns - handle @botname suffix in groups
-const CMD_START = /^\/start(?:@\w+)?(?:\s|$)/;
-const CMD_VIDEO = /^\/video(?:@\w+)?(?:\s|$)/;
-const CMD_AUDIO = /^\/audio(?:@\w+)?(?:\s|$)/;
-const CMD_TEXT = /^\/text(?:@\w+)?(?:\s|$)/;
-const CMD_BROADCAST = /^\/broadcast(?:@\w+)?(?:\s|$)/;
+/**
+ * Parse command from message text
+ * Handles: /command, /command@botname, /command params
+ * Returns: { command: 'start', params: 'optional params' } or null
+ */
+function parseCommand(text) {
+  if (!text || typeof text !== 'string') return null;
 
-// /start - Today's chapter (video + audio + text)
-bot.onText(CMD_START, async (msg) => {
-  if (isRateLimited(msg.chat.id)) {
-    return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
-  }
-  try {
-    await bot.sendMessage(msg.chat.id, buildWelcomeMessage(), { parse_mode: 'Markdown' });
-    await sendDailyNachYomi(msg.chat.id);
-  } catch (err) {
-    console.error('Start command failed:', err.message);
-    await bot.sendMessage(msg.chat.id, '❌ Error loading chapter. Please try again.');
-  }
-});
+  // Match /command or /command@botname at start, with optional params
+  const match = text.match(/^\/([a-zA-Z0-9_]+)(?:@[a-zA-Z0-9_]+)?(?:\s+(.*))?$/);
+  if (!match) return null;
 
-// /video - Video shiur only
-bot.onText(CMD_VIDEO, async (msg) => {
-  if (isRateLimited(msg.chat.id)) {
-    return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
-  }
-  try {
-    const nachYomi = await getTodaysNachYomi();
-    const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-    await sendVideoShiur(msg.chat.id, nachYomi, shiurId);
-  } catch (err) {
-    console.error('Video command failed:', err.message);
-    await bot.sendMessage(msg.chat.id, `❌ Error: ${err.message}`);
-  }
-});
+  return {
+    command: match[1].toLowerCase(),
+    params: match[2] || ''
+  };
+}
 
-// /audio - Audio shiur only
-bot.onText(CMD_AUDIO, async (msg) => {
-  if (isRateLimited(msg.chat.id)) {
-    return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
-  }
-  try {
-    const nachYomi = await getTodaysNachYomi();
-    const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-    await sendAudioShiur(msg.chat.id, nachYomi, shiurId);
-  } catch (err) {
-    console.error('Audio command failed:', err.message);
-    await bot.sendMessage(msg.chat.id, `❌ Error: ${err.message}`);
-  }
-});
+// Single message handler for all commands
+bot.on('message', async (msg) => {
+  // Skip non-text messages
+  if (!msg.text) return;
 
-// /text - Text only
-bot.onText(CMD_TEXT, async (msg) => {
-  if (isRateLimited(msg.chat.id)) {
-    return bot.sendMessage(msg.chat.id, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
-  }
-  try {
-    const nachYomi = await getTodaysNachYomi();
-    const chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null }).catch(() => null);
-    await sendChapterText(msg.chat.id, nachYomi, chapterText);
-  } catch (err) {
-    console.error('Text command failed:', err.message);
-    await bot.sendMessage(msg.chat.id, '❌ Error fetching text.');
-  }
-});
+  const parsed = parseCommand(msg.text);
+  if (!parsed) return;
 
-// /broadcast - Admin only: send to channel
-bot.onText(CMD_BROADCAST, async (msg) => {
-  if (ADMIN_CHAT_ID && msg.chat.id.toString() !== ADMIN_CHAT_ID) return;
-  if (!CHANNEL_ID) {
-    await bot.sendMessage(msg.chat.id, 'No channel configured.');
-    return;
+  const { command } = parsed;
+  const chatId = msg.chat.id;
+
+  console.log(`[${new Date().toISOString()}] Command received: /${command} from chat ${chatId}`);
+
+  // Rate limit check (except for broadcast which is admin-only)
+  if (command !== 'broadcast' && isRateLimited(chatId)) {
+    return bot.sendMessage(chatId, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
   }
+
   try {
-    await sendDailyNachYomi(CHANNEL_ID);
-    await bot.sendMessage(msg.chat.id, '✅ Broadcast sent.');
+    switch (command) {
+      case 'start': {
+        await bot.sendMessage(chatId, buildWelcomeMessage(), { parse_mode: 'Markdown' });
+        await sendDailyNachYomi(chatId);
+        break;
+      }
+
+      case 'video': {
+        const nachYomi = await getTodaysNachYomi();
+        const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
+        await sendVideoShiur(chatId, nachYomi, shiurId);
+        break;
+      }
+
+      case 'audio': {
+        const nachYomi = await getTodaysNachYomi();
+        const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
+        await sendAudioShiur(chatId, nachYomi, shiurId);
+        break;
+      }
+
+      case 'text': {
+        const nachYomi = await getTodaysNachYomi();
+        const chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null }).catch(() => null);
+        await sendChapterText(chatId, nachYomi, chapterText);
+        break;
+      }
+
+      case 'broadcast': {
+        // Admin only
+        if (ADMIN_CHAT_ID && chatId.toString() !== ADMIN_CHAT_ID) {
+          console.log(`Unauthorized broadcast attempt from ${chatId}`);
+          return;
+        }
+        if (!CHANNEL_ID) {
+          await bot.sendMessage(chatId, 'No channel configured.');
+          return;
+        }
+        await sendDailyNachYomi(CHANNEL_ID);
+        await bot.sendMessage(chatId, '✅ Broadcast sent.');
+        break;
+      }
+
+      default:
+        // Unknown command - ignore silently
+        return;
+    }
   } catch (err) {
-    console.error('Broadcast command failed:', err.message);
-    await bot.sendMessage(msg.chat.id, `❌ Broadcast failed: ${err.message}`);
+    console.error(`[${new Date().toISOString()}] Command /${command} failed:`, err.message);
+
+    const errorMessages = {
+      start: '❌ Error loading chapter. Please try again.',
+      video: `❌ Error: ${err.message}`,
+      audio: `❌ Error: ${err.message}`,
+      text: '❌ Error fetching text.',
+      broadcast: `❌ Broadcast failed: ${err.message}`
+    };
+
+    await bot.sendMessage(chatId, errorMessages[command] || '❌ An error occurred.').catch(() => {});
   }
 });
 
