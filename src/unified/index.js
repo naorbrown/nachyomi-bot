@@ -13,8 +13,8 @@ const UNIFIED_CHANNEL_ID = process.env.TORAH_YOMI_CHANNEL_ID;
 const UNIFIED_BOT_TOKEN = process.env.TORAH_YOMI_CHANNEL_BOT_TOKEN;
 const PUBLISH_ENABLED = process.env.TORAH_YOMI_PUBLISH_ENABLED !== 'false';
 
-// Source configuration
-const SOURCE = 'nach_yomi';
+// Source configuration (exported for potential future use)
+const _SOURCE = 'nach_yomi'; // eslint-disable-line no-unused-vars
 const BADGE = '📖 Nach Yomi | נ"ך יומי';
 const BOT_USERNAME = 'NachYomiBot';
 
