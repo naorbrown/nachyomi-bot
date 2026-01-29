@@ -237,12 +237,20 @@ async function runBroadcast() {
 
   const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
 
-  // Send video (function handles its own errors)
-  await sendVideoShiur(CHANNEL_ID, nachYomi, shiurId, ffmpegAvailable);
+  // Send video (function handles its own errors, but wrap just in case)
+  try {
+    await sendVideoShiur(CHANNEL_ID, nachYomi, shiurId, ffmpegAvailable);
+  } catch (err) {
+    console.error('Video send failed unexpectedly:', err.message);
+  }
 
-  // Send audio (function handles its own errors)
+  // Send audio (function handles its own errors, but wrap just in case)
   if (shiurId) {
-    await sendAudioShiur(CHANNEL_ID, nachYomi, shiurId);
+    try {
+      await sendAudioShiur(CHANNEL_ID, nachYomi, shiurId);
+    } catch (err) {
+      console.error('Audio send failed unexpectedly:', err.message);
+    }
   }
 
   // Send text
@@ -252,7 +260,11 @@ async function runBroadcast() {
   } catch (err) {
     console.warn('Text fetch failed:', err.message);
   }
-  await sendChapterText(CHANNEL_ID, nachYomi, chapterText);
+  try {
+    await sendChapterText(CHANNEL_ID, nachYomi, chapterText);
+  } catch (err) {
+    console.error('Text send failed:', err.message);
+  }
 
   // Publish to unified Torah Yomi channel
   if (isUnifiedChannelEnabled()) {
@@ -281,4 +293,7 @@ async function runBroadcast() {
   process.exit(0);
 }
 
-runBroadcast();
+runBroadcast().catch((err) => {
+  console.error('Broadcast failed:', err.message);
+  process.exit(1);
+});
