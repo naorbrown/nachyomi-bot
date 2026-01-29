@@ -7,7 +7,13 @@ on:
     # Summer (UTC+3): 6am Israel = 3am UTC
     - cron: '0 3 * * *'
     - cron: '0 4 * * *'
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force broadcast (bypass 6am Israel time check)'
+        required: false
+        default: 'true'
+        type: boolean
 
 jobs:
   broadcast:
@@ -34,3 +40,4 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
           ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+          FORCE_BROADCAST: ${{ github.event.inputs.force || 'false' }}
