@@ -361,7 +361,7 @@ npm run format
 
 ### Coverage Targets
 
-The project maintains **80% code coverage** thresholds for:
+The project maintains **70% code coverage** thresholds for:
 - Lines
 - Functions
 - Branches

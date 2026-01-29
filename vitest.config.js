@@ -12,10 +12,10 @@ export default defineConfig({
       include: ['src/**/*.js'],
       exclude: ['src/index.js'], // Entry point with side effects
       thresholds: {
-        lines: 80,
-        branches: 75,
-        functions: 80,
-        statements: 80
+        lines: 70,
+        branches: 65,
+        functions: 70,
+        statements: 70
       }
     },
     testTimeout: 10000

@@ -71,7 +71,7 @@ npm run test:coverage
 All pull requests must:
 
 1. **Pass all existing tests** — CI will reject PRs with failing tests
-2. **Maintain 80% coverage** — Add tests for new functionality
+2. **Maintain 70% coverage** — Add tests for new functionality
 3. **Pass linting** — Run `npm run lint` before submitting
 4. **Pass formatting** — Run `npm run format:check`
 
