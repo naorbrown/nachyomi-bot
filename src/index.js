@@ -37,7 +37,7 @@ import {
   cleanupVideoParts,
   checkFfmpeg,
 } from './videoService.js';
-import { isUnifiedChannelEnabled, publishTextToUnified, publishVideoToUnified, publishAudioToUnified } from './unified/index.js';
+import { isUnifiedChannelEnabled, publishTextToUnified } from './unified/index.js';
 
 // Configuration
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -460,7 +460,6 @@ async function sendToUnifiedChannel() {
     const nachYomi = await getTodaysNachYomi();
     console.log(`Publishing to unified channel: ${nachYomi.book} ${nachYomi.chapter}`);
 
-    const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
     let chapterText = null;
 
     try {
