@@ -28,6 +28,18 @@ import {
 import { getShiurId, getShiurAudioUrl, getShiurVideoUrl, getShiurUrl } from './data/shiurMapping.js';
 import { prepareVideoForTelegram, cleanupVideo, cleanupVideoParts, checkFfmpeg } from './videoService.js';
 
+// ============================================
+// GLOBAL ERROR HANDLERS - Must be first!
+// ============================================
+process.on('unhandledRejection', (reason, promise) => {
+  console.error(`[${new Date().toISOString()}] UNHANDLED REJECTION:`, reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error(`[${new Date().toISOString()}] UNCAUGHT EXCEPTION:`, err);
+  // Don't exit - try to keep running
+});
+
 // Configuration
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
@@ -40,6 +52,7 @@ if (!BOT_TOKEN) {
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 let ffmpegAvailable = false;
+let botReady = false;  // Guard against commands before initialization
 
 // Rate limiting: 5 requests per minute per user
 const rateLimits = new Map();
@@ -70,22 +83,35 @@ function isRateLimited(chatId) {
   return false;
 }
 
-// Initialize
+// Initialize with proper error handling
 (async () => {
-  ffmpegAvailable = await checkFfmpeg();
+  console.log(`[${new Date().toISOString()}] Nach Yomi Bot starting...`);
 
-  // Set bot commands programmatically
-  await bot.setMyCommands([
-    { command: 'today', description: "Get today's Nach Yomi" },
-    { command: 'start', description: "Get today's shiur" },
-    { command: 'video', description: 'Watch the video shiur' },
-    { command: 'audio', description: 'Listen to the audio shiur' },
-    { command: 'text', description: 'Read the chapter' }
-  ]);
+  try {
+    // Check FFmpeg availability
+    ffmpegAvailable = await checkFfmpeg();
+    console.log(`[${new Date().toISOString()}] FFmpeg: ${ffmpegAvailable ? 'available' : 'not available'}`);
 
-  console.log('Nach Yomi Bot started');
-  console.log(`FFmpeg: ${ffmpegAvailable ? 'yes' : 'no'}`);
-  console.log('Commands registered');
+    // Set bot commands programmatically
+    await bot.setMyCommands([
+      { command: 'today', description: "Get today's Nach Yomi" },
+      { command: 'start', description: "Get today's shiur" },
+      { command: 'video', description: 'Watch the video shiur' },
+      { command: 'audio', description: 'Listen to the audio shiur' },
+      { command: 'text', description: 'Read the chapter' }
+    ]);
+    console.log(`[${new Date().toISOString()}] Commands registered with Telegram`);
+
+    // Mark bot as ready to accept commands
+    botReady = true;
+    console.log(`[${new Date().toISOString()}] Nach Yomi Bot is READY and accepting commands`);
+
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Initialization error:`, err.message);
+    // Still mark as ready - bot can work without setMyCommands
+    botReady = true;
+    console.log(`[${new Date().toISOString()}] Bot marked ready despite init error`);
+  }
 })();
 
 /**
@@ -119,7 +145,8 @@ async function sendVideoShiur(chatId, nachYomi, shiurId) {
     const videoResult = await prepareVideoForTelegram(videoUrl, shiurId);
 
     // Delete status message
-    await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
+    await bot.deleteMessage(chatId, statusMsg.message_id)
+      .catch(err => console.log('Could not delete status message:', err.message));
 
     if (!videoResult) {
       throw new Error('Video preparation failed');
@@ -190,7 +217,7 @@ async function sendVideoShiur(chatId, nachYomi, shiurId) {
       `Video conversion failed. Watch on Kol Halashon instead:\n\n` +
       `[Watch Full Shiur](${shiurPageUrl})`,
       { parse_mode: 'Markdown', disable_web_page_preview: true }
-    ).catch(() => {});
+    ).catch(err => console.error('Failed to send video fallback:', err.message));
   }
   return false;
 }
@@ -231,7 +258,7 @@ async function sendAudioShiur(chatId, nachYomi, shiurId) {
       `Audio loading failed. Listen on Kol Halashon instead:\n\n` +
       `[Listen to Full Shiur](${shiurPageUrl})`,
       { parse_mode: 'Markdown', disable_web_page_preview: true }
-    ).catch(() => {});
+    ).catch(err => console.error('Failed to send audio fallback:', err.message));
     return false;
   }
 }
@@ -291,9 +318,10 @@ async function sendDailyNachYomi(chatId, options = {}) {
     return true;
 
   } catch (error) {
-    console.error('Send failed:', error.message);
+    console.error(`[${new Date().toISOString()}] Send failed:`, error.message);
     if (ADMIN_CHAT_ID) {
-      bot.sendMessage(ADMIN_CHAT_ID, `❌ Error: ${error.message}`).catch(() => {});
+      bot.sendMessage(ADMIN_CHAT_ID, `❌ Error: ${error.message}`)
+        .catch(err => console.error('Failed to notify admin:', err.message));
     }
     throw error;
   }
@@ -311,96 +339,128 @@ async function sendDailyNachYomi(chatId, options = {}) {
 function parseCommand(text) {
   if (!text || typeof text !== 'string') return null;
 
-  // Match /command or /command@botname at start, with optional params
-  const match = text.match(/^\/([a-zA-Z0-9_]+)(?:@[a-zA-Z0-9_]+)?(?:\s+(.*))?$/);
-  if (!match) return null;
+  // Trim whitespace and newlines
+  const trimmed = text.trim();
 
-  return {
-    command: match[1].toLowerCase(),
-    params: match[2] || ''
-  };
+  // Must start with /
+  if (!trimmed.startsWith('/')) return null;
+
+  // Extract command: /command or /command@botname
+  const spaceIndex = trimmed.indexOf(' ');
+  const commandPart = spaceIndex > 0 ? trimmed.slice(0, spaceIndex) : trimmed;
+  const params = spaceIndex > 0 ? trimmed.slice(spaceIndex + 1).trim() : '';
+
+  // Parse command name (remove / and optional @botname)
+  const atIndex = commandPart.indexOf('@');
+  const command = atIndex > 0
+    ? commandPart.slice(1, atIndex).toLowerCase()
+    : commandPart.slice(1).toLowerCase();
+
+  if (!command) return null;
+
+  return { command, params };
 }
 
 // Single message handler for all commands
 bot.on('message', async (msg) => {
-  // Skip non-text messages
-  if (!msg.text) return;
-
-  const parsed = parseCommand(msg.text);
-  if (!parsed) return;
-
-  const { command } = parsed;
-  const chatId = msg.chat.id;
-
-  console.log(`[${new Date().toISOString()}] Command received: /${command} from chat ${chatId}`);
-
-  // Rate limit check (except for broadcast which is admin-only)
-  if (command !== 'broadcast' && isRateLimited(chatId)) {
-    return bot.sendMessage(chatId, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
-  }
-
+  // OUTER TRY-CATCH: Ensures we NEVER silently fail
   try {
-    switch (command) {
-      case 'start':
-      case 'today': {
-        await bot.sendMessage(chatId, buildWelcomeMessage(), { parse_mode: 'Markdown' });
-        await sendDailyNachYomi(chatId);
-        break;
-      }
-
-      case 'video': {
-        const nachYomi = await getTodaysNachYomi();
-        const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-        await sendVideoShiur(chatId, nachYomi, shiurId);
-        break;
-      }
-
-      case 'audio': {
-        const nachYomi = await getTodaysNachYomi();
-        const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-        await sendAudioShiur(chatId, nachYomi, shiurId);
-        break;
-      }
-
-      case 'text': {
-        const nachYomi = await getTodaysNachYomi();
-        const chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null }).catch(() => null);
-        await sendChapterText(chatId, nachYomi, chapterText);
-        break;
-      }
-
-      case 'broadcast': {
-        // Admin only
-        if (ADMIN_CHAT_ID && chatId.toString() !== ADMIN_CHAT_ID) {
-          console.log(`Unauthorized broadcast attempt from ${chatId}`);
-          return;
-        }
-        if (!CHANNEL_ID) {
-          await bot.sendMessage(chatId, 'No channel configured.');
-          return;
-        }
-        await sendDailyNachYomi(CHANNEL_ID);
-        await bot.sendMessage(chatId, '✅ Broadcast sent.');
-        break;
-      }
-
-      default:
-        // Unknown command - ignore silently
-        return;
+    // Guard: Bot must be initialized
+    if (!botReady) {
+      console.log(`[${new Date().toISOString()}] Message received but bot not ready yet`);
+      return;
     }
-  } catch (err) {
-    console.error(`[${new Date().toISOString()}] Command /${command} failed:`, err.message);
 
-    const errorMessages = {
-      start: '❌ Error loading chapter. Please try again.',
-      today: '❌ Error loading chapter. Please try again.',
-      video: `❌ Error: ${err.message}`,
-      audio: `❌ Error: ${err.message}`,
-      text: '❌ Error fetching text.',
-      broadcast: `❌ Broadcast failed: ${err.message}`
-    };
+    // Skip non-text messages
+    if (!msg.text) return;
 
-    await bot.sendMessage(chatId, errorMessages[command] || '❌ An error occurred.').catch(() => {});
+    const parsed = parseCommand(msg.text);
+    if (!parsed) return;
+
+    const { command } = parsed;
+    const chatId = msg.chat.id;
+
+    console.log(`[${new Date().toISOString()}] Command received: /${command} from chat ${chatId}`);
+
+    // Rate limit check (except for broadcast which is admin-only)
+    if (command !== 'broadcast' && isRateLimited(chatId)) {
+      await bot.sendMessage(chatId, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
+      return;
+    }
+
+    try {
+      switch (command) {
+        case 'start':
+        case 'today': {
+          // Send immediate acknowledgment
+          await bot.sendMessage(chatId, '📖 _Loading today\'s Nach Yomi..._', { parse_mode: 'Markdown' });
+          await bot.sendMessage(chatId, buildWelcomeMessage(), { parse_mode: 'Markdown' });
+          await sendDailyNachYomi(chatId);
+          break;
+        }
+
+        case 'video': {
+          await bot.sendMessage(chatId, '🎬 _Loading video..._', { parse_mode: 'Markdown' });
+          const nachYomi = await getTodaysNachYomi();
+          const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
+          await sendVideoShiur(chatId, nachYomi, shiurId);
+          break;
+        }
+
+        case 'audio': {
+          await bot.sendMessage(chatId, '🎧 _Loading audio..._', { parse_mode: 'Markdown' });
+          const nachYomi = await getTodaysNachYomi();
+          const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
+          await sendAudioShiur(chatId, nachYomi, shiurId);
+          break;
+        }
+
+        case 'text': {
+          await bot.sendMessage(chatId, '📜 _Loading text..._', { parse_mode: 'Markdown' });
+          const nachYomi = await getTodaysNachYomi();
+          const chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null }).catch(() => null);
+          await sendChapterText(chatId, nachYomi, chapterText);
+          break;
+        }
+
+        case 'broadcast': {
+          // Admin only
+          if (ADMIN_CHAT_ID && chatId.toString() !== ADMIN_CHAT_ID) {
+            console.log(`[${new Date().toISOString()}] Unauthorized broadcast attempt from ${chatId}`);
+            return;
+          }
+          if (!CHANNEL_ID) {
+            await bot.sendMessage(chatId, 'No channel configured.');
+            return;
+          }
+          await bot.sendMessage(chatId, '📡 _Broadcasting..._', { parse_mode: 'Markdown' });
+          await sendDailyNachYomi(CHANNEL_ID);
+          await bot.sendMessage(chatId, '✅ Broadcast sent.');
+          break;
+        }
+
+        default:
+          // Unknown command - ignore silently
+          return;
+      }
+    } catch (err) {
+      console.error(`[${new Date().toISOString()}] Command /${command} failed:`, err.message, err.stack);
+
+      const errorMessages = {
+        start: '❌ Error loading chapter. Please try again.',
+        today: '❌ Error loading chapter. Please try again.',
+        video: `❌ Video error: ${err.message}`,
+        audio: `❌ Audio error: ${err.message}`,
+        text: '❌ Error fetching text. Please try again.',
+        broadcast: `❌ Broadcast failed: ${err.message}`
+      };
+
+      await bot.sendMessage(chatId, errorMessages[command] || '❌ An error occurred. Please try again.')
+        .catch(sendErr => console.error(`[${new Date().toISOString()}] Failed to send error message:`, sendErr.message));
+    }
+  } catch (outerErr) {
+    // This catches ANY error including issues with msg object itself
+    console.error(`[${new Date().toISOString()}] CRITICAL: Message handler outer error:`, outerErr.message, outerErr.stack);
   }
 });
 
@@ -422,7 +482,8 @@ async function runScheduledBroadcast() {
       await sendDailyNachYomi(CHANNEL_ID);
       console.log(`[${new Date().toISOString()}] Scheduled broadcast completed successfully`);
       if (ADMIN_CHAT_ID) {
-        bot.sendMessage(ADMIN_CHAT_ID, `✅ Daily broadcast sent successfully`).catch(() => {});
+        bot.sendMessage(ADMIN_CHAT_ID, `✅ Daily broadcast sent successfully`)
+          .catch(err => console.error('Failed to notify admin of success:', err.message));
       }
       return; // Success - exit retry loop
     } catch (err) {
@@ -436,7 +497,8 @@ async function runScheduledBroadcast() {
         // All retries exhausted
         console.error(`[${new Date().toISOString()}] All broadcast attempts failed`);
         if (ADMIN_CHAT_ID) {
-          bot.sendMessage(ADMIN_CHAT_ID, `❌ Scheduled broadcast failed after ${MAX_RETRIES} attempts: ${err.message}`).catch(() => {});
+          bot.sendMessage(ADMIN_CHAT_ID, `❌ Scheduled broadcast failed after ${MAX_RETRIES} attempts: ${err.message}`)
+            .catch(notifyErr => console.error('Failed to notify admin of failure:', notifyErr.message));
         }
       }
     }
@@ -453,8 +515,18 @@ if (CHANNEL_ID) {
 // ERROR HANDLERS
 // ============================================
 
-bot.on('polling_error', (err) => console.error('Polling error:', err.message));
-bot.on('error', (err) => console.error('Bot error:', err.message));
+bot.on('polling_error', (err) => {
+  console.error(`[${new Date().toISOString()}] POLLING ERROR:`, err.message);
+  // Notify admin of polling issues
+  if (ADMIN_CHAT_ID) {
+    bot.sendMessage(ADMIN_CHAT_ID, `⚠️ Polling error: ${err.message}`)
+      .catch(sendErr => console.error('Failed to notify admin:', sendErr.message));
+  }
+});
+
+bot.on('error', (err) => {
+  console.error(`[${new Date().toISOString()}] BOT ERROR:`, err.message);
+});
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
