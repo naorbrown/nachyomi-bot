@@ -223,81 +223,62 @@ async function runBroadcast() {
     console.log('FORCE_BROADCAST enabled, bypassing time check');
   }
 
-  const MAX_RETRIES = 3;
-  const RETRY_DELAYS = [30000, 60000, 120000];
+  // NO RETRY LOOP: Retrying would cause duplicate messages if video/audio
+  // succeeded but text failed. Each send function handles its own errors.
 
   console.log(`[${new Date().toISOString()}] Starting broadcast to ${CHANNEL_ID}...`);
 
   const ffmpegAvailable = await checkFfmpeg();
   console.log(`FFmpeg available: ${ffmpegAvailable}`);
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  // Get today's Nach Yomi - fail fast if this doesn't work
+  const nachYomi = await getTodaysNachYomi();
+  console.log(`Today's Nach Yomi: ${nachYomi.book} ${nachYomi.chapter}`);
+
+  const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
+
+  // Send video (function handles its own errors)
+  await sendVideoShiur(CHANNEL_ID, nachYomi, shiurId, ffmpegAvailable);
+
+  // Send audio (function handles its own errors)
+  if (shiurId) {
+    await sendAudioShiur(CHANNEL_ID, nachYomi, shiurId);
+  }
+
+  // Send text
+  let chapterText = null;
+  try {
+    chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null });
+  } catch (err) {
+    console.warn('Text fetch failed:', err.message);
+  }
+  await sendChapterText(CHANNEL_ID, nachYomi, chapterText);
+
+  // Publish to unified Torah Yomi channel
+  if (isUnifiedChannelEnabled()) {
     try {
-      const nachYomi = await getTodaysNachYomi();
-      console.log(`Today's Nach Yomi: ${nachYomi.book} ${nachYomi.chapter}`);
-
-      const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-
-      // Send video
-      await sendVideoShiur(CHANNEL_ID, nachYomi, shiurId, ffmpegAvailable);
-
-      // Send audio
-      if (shiurId) {
-        await sendAudioShiur(CHANNEL_ID, nachYomi, shiurId);
-      }
-
-      // Send text
-      let chapterText = null;
-      try {
-        chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null });
-      } catch (err) {
-        console.warn('Text fetch failed:', err.message);
-      }
-      await sendChapterText(CHANNEL_ID, nachYomi, chapterText);
-
-      // Publish to unified Torah Yomi channel
-      if (isUnifiedChannelEnabled()) {
-        try {
-          const summaryText = `📖 *${nachYomi.book} ${nachYomi.chapter}*\n` +
-            `_${nachYomi.hebrewBook || ''}_\n\n` +
-            `🎧 Audio & 🎬 Video shiurim by Rav Yitzchok Breitowitz\n` +
-            `📚 Full chapter with Hebrew/English text\n\n` +
-            `_Use @NachYomiBot for the complete experience_`;
-          await publishTextToUnified(summaryText);
-          console.log('[TorahYomi] Published to unified channel');
-        } catch (unifiedErr) {
-          console.error('[TorahYomi] Unified channel publish failed:', unifiedErr.message);
-          // Don't fail the main broadcast
-        }
-      }
-
-      console.log(`[${new Date().toISOString()}] Broadcast completed successfully`);
-
-      if (ADMIN_CHAT_ID) {
-        await bot
-          .sendMessage(ADMIN_CHAT_ID, `✅ Daily broadcast sent: ${nachYomi.book} ${nachYomi.chapter}`)
-          .catch(() => {});
-      }
-
-      process.exit(0);
-    } catch (err) {
-      console.error(`Attempt ${attempt}/${MAX_RETRIES} failed:`, err.message);
-
-      if (attempt < MAX_RETRIES) {
-        const delay = RETRY_DELAYS[attempt - 1];
-        console.log(`Retrying in ${delay / 1000} seconds...`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      } else {
-        console.error('All broadcast attempts failed');
-        if (ADMIN_CHAT_ID) {
-          await bot
-            .sendMessage(ADMIN_CHAT_ID, `❌ Broadcast failed after ${MAX_RETRIES} attempts: ${err.message}`)
-            .catch(() => {});
-        }
-        process.exit(1);
-      }
+      const summaryText = `📖 *${nachYomi.book} ${nachYomi.chapter}*\n` +
+        `_${nachYomi.hebrewBook || ''}_\n\n` +
+        `🎧 Audio & 🎬 Video shiurim by Rav Yitzchok Breitowitz\n` +
+        `📚 Full chapter with Hebrew/English text\n\n` +
+        `_Use @NachYomiBot for the complete experience_`;
+      await publishTextToUnified(summaryText);
+      console.log('[TorahYomi] Published to unified channel');
+    } catch (unifiedErr) {
+      console.error('[TorahYomi] Unified channel publish failed:', unifiedErr.message);
+      // Don't fail the main broadcast
     }
   }
+
+  console.log(`[${new Date().toISOString()}] Broadcast completed successfully`);
+
+  if (ADMIN_CHAT_ID) {
+    await bot
+      .sendMessage(ADMIN_CHAT_ID, `✅ Daily broadcast sent: ${nachYomi.book} ${nachYomi.chapter}`)
+      .catch(() => {});
+  }
+
+  process.exit(0);
 }
 
 runBroadcast();
