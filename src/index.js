@@ -37,6 +37,7 @@ import {
   cleanupVideoParts,
   checkFfmpeg,
 } from './videoService.js';
+import { isUnifiedChannelEnabled, publishTextToUnified, publishVideoToUnified, publishAudioToUnified } from './unified/index.js';
 
 // Configuration
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -442,6 +443,57 @@ bot.on('message', async msg => {
 });
 
 // ============================================
+// UNIFIED CHANNEL PUBLISHING
+// ============================================
+
+/**
+ * Send a condensed summary to the unified Torah Yomi channel
+ * This is a simplified version optimized for the aggregated channel
+ */
+async function sendToUnifiedChannel() {
+  if (!isUnifiedChannelEnabled()) {
+    console.log('Unified channel not configured, skipping');
+    return;
+  }
+
+  try {
+    const nachYomi = await getTodaysNachYomi();
+    console.log(`Publishing to unified channel: ${nachYomi.book} ${nachYomi.chapter}`);
+
+    const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
+    let chapterText = null;
+
+    try {
+      chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: 3 });
+    } catch (err) {
+      console.warn('Text fetch for unified channel failed:', err.message);
+    }
+
+    // Build summary message for unified channel
+    let summaryText = `📖 *${nachYomi.book} ${nachYomi.chapter}*\n`;
+    summaryText += `_${nachYomi.hebrewBook || ''}_\n\n`;
+
+    if (chapterText && chapterText.verses && chapterText.verses.length > 0) {
+      const firstVerse = chapterText.verses[0];
+      if (firstVerse.hebrew) {
+        summaryText += `*פסוק א׳:*\n${firstVerse.hebrew}\n\n`;
+      }
+    }
+
+    summaryText += `🎧 Audio & 🎬 Video shiurim available\n`;
+    summaryText += `📚 Full chapter with Hebrew/English text\n\n`;
+    summaryText += `_Rav Yitzchok Breitowitz_`;
+
+    await publishTextToUnified(summaryText);
+    console.log('Published to unified channel successfully');
+
+  } catch (error) {
+    console.error('Unified channel publish failed:', error.message);
+    // Don't throw - unified channel failure shouldn't affect primary bot
+  }
+}
+
+// ============================================
 // SCHEDULED TASKS
 // ============================================
 
@@ -458,6 +510,15 @@ async function runScheduledBroadcast() {
     try {
       await sendDailyNachYomi(CHANNEL_ID);
       console.log(`[${new Date().toISOString()}] Scheduled broadcast completed successfully`);
+
+      // After successful primary broadcast, publish to unified channel
+      try {
+        await sendToUnifiedChannel();
+      } catch (unifiedErr) {
+        console.error('Unified channel publish failed:', unifiedErr.message);
+        // Don't throw - unified channel is non-critical
+      }
+
       if (ADMIN_CHAT_ID) {
         bot.sendMessage(ADMIN_CHAT_ID, `✅ Daily broadcast sent successfully`).catch(() => {});
       }
