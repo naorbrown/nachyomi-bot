@@ -206,6 +206,20 @@ async function sendChapterText(chatId, nachYomi, chapterText) {
 }
 
 async function runBroadcast() {
+  // Check if it's actually 6am Israel time (handles DST automatically)
+  // This allows us to schedule at both 3am and 4am UTC and skip the wrong one
+  const now = new Date();
+  const israelHour = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    hour12: false,
+    timeZone: 'Asia/Jerusalem',
+  }).format(now);
+
+  if (israelHour !== '6') {
+    console.log(`Not 6am Israel time (currently ${israelHour}:00), skipping broadcast`);
+    process.exit(0);
+  }
+
   const MAX_RETRIES = 3;
   const RETRY_DELAYS = [30000, 60000, 120000];
 
