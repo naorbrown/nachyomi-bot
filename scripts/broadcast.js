@@ -32,10 +32,12 @@ import {
   cleanupVideoParts,
   checkFfmpeg,
 } from '../src/videoService.js';
+import { isIsrael6am, getIsraelHour } from '../src/utils/israelTime.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
+const FORCE_BROADCAST = process.env.FORCE_BROADCAST === 'true';
 
 if (!BOT_TOKEN) {
   console.error('TELEGRAM_BOT_TOKEN required');
@@ -208,16 +210,16 @@ async function sendChapterText(chatId, nachYomi, chapterText) {
 async function runBroadcast() {
   // Check if it's actually 6am Israel time (handles DST automatically)
   // This allows us to schedule at both 3am and 4am UTC and skip the wrong one
-  const now = new Date();
-  const israelHour = new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    hour12: false,
-    timeZone: 'Asia/Jerusalem',
-  }).format(now);
-
-  if (israelHour !== '6') {
+  // FORCE_BROADCAST=true bypasses this check for manual triggers
+  if (!FORCE_BROADCAST && !isIsrael6am()) {
+    const israelHour = getIsraelHour();
     console.log(`Not 6am Israel time (currently ${israelHour}:00), skipping broadcast`);
+    console.log('Use FORCE_BROADCAST=true to bypass this check');
     process.exit(0);
+  }
+
+  if (FORCE_BROADCAST) {
+    console.log('FORCE_BROADCAST enabled, bypassing time check');
   }
 
   const MAX_RETRIES = 3;
