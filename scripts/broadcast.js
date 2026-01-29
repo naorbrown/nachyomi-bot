@@ -222,65 +222,43 @@ async function runBroadcast() {
     console.log('FORCE_BROADCAST enabled, bypassing time check');
   }
 
-  const MAX_RETRIES = 3;
-  const RETRY_DELAYS = [30000, 60000, 120000];
-
   console.log(`[${new Date().toISOString()}] Starting broadcast to ${CHANNEL_ID}...`);
 
   const ffmpegAvailable = await checkFfmpeg();
   console.log(`FFmpeg available: ${ffmpegAvailable}`);
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const nachYomi = await getTodaysNachYomi();
-      console.log(`Today's Nach Yomi: ${nachYomi.book} ${nachYomi.chapter}`);
+  // Get today's Nach Yomi - fail fast if this doesn't work
+  const nachYomi = await getTodaysNachYomi();
+  console.log(`Today's Nach Yomi: ${nachYomi.book} ${nachYomi.chapter}`);
 
-      const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
+  const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
 
-      // Send video
-      await sendVideoShiur(CHANNEL_ID, nachYomi, shiurId, ffmpegAvailable);
+  // Send each component - individual functions handle their own errors
+  // NO RETRY LOOP: Retrying would cause duplicate messages if video/audio
+  // succeeded but text failed. Each function sends fallback links on failure.
+  await sendVideoShiur(CHANNEL_ID, nachYomi, shiurId, ffmpegAvailable);
 
-      // Send audio
-      if (shiurId) {
-        await sendAudioShiur(CHANNEL_ID, nachYomi, shiurId);
-      }
-
-      // Send text
-      let chapterText = null;
-      try {
-        chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null });
-      } catch (err) {
-        console.warn('Text fetch failed:', err.message);
-      }
-      await sendChapterText(CHANNEL_ID, nachYomi, chapterText);
-
-      console.log(`[${new Date().toISOString()}] Broadcast completed successfully`);
-
-      if (ADMIN_CHAT_ID) {
-        await bot
-          .sendMessage(ADMIN_CHAT_ID, `✅ Daily broadcast sent: ${nachYomi.book} ${nachYomi.chapter}`)
-          .catch(() => {});
-      }
-
-      process.exit(0);
-    } catch (err) {
-      console.error(`Attempt ${attempt}/${MAX_RETRIES} failed:`, err.message);
-
-      if (attempt < MAX_RETRIES) {
-        const delay = RETRY_DELAYS[attempt - 1];
-        console.log(`Retrying in ${delay / 1000} seconds...`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      } else {
-        console.error('All broadcast attempts failed');
-        if (ADMIN_CHAT_ID) {
-          await bot
-            .sendMessage(ADMIN_CHAT_ID, `❌ Broadcast failed after ${MAX_RETRIES} attempts: ${err.message}`)
-            .catch(() => {});
-        }
-        process.exit(1);
-      }
-    }
+  if (shiurId) {
+    await sendAudioShiur(CHANNEL_ID, nachYomi, shiurId);
   }
+
+  let chapterText = null;
+  try {
+    chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null });
+  } catch (err) {
+    console.warn('Text fetch failed:', err.message);
+  }
+  await sendChapterText(CHANNEL_ID, nachYomi, chapterText);
+
+  console.log(`[${new Date().toISOString()}] Broadcast completed successfully`);
+
+  if (ADMIN_CHAT_ID) {
+    await bot
+      .sendMessage(ADMIN_CHAT_ID, `✅ Daily broadcast sent: ${nachYomi.book} ${nachYomi.chapter}`)
+      .catch(() => {});
+  }
+
+  process.exit(0);
 }
 
 runBroadcast();
