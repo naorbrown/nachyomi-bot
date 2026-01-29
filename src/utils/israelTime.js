@@ -13,7 +13,9 @@ export function getIsraelHour() {
     hour12: false,
     timeZone: 'Asia/Jerusalem',
   });
-  return parseInt(formatter.format(now), 10);
+  const hour = parseInt(formatter.format(now), 10);
+  // Intl.DateTimeFormat returns 24 for midnight in some environments
+  return hour === 24 ? 0 : hour;
 }
 
 /**
