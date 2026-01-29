@@ -49,15 +49,47 @@ npm run dev
 - Async/await for asynchronous code
 - Descriptive variable names
 - Comments for complex logic
+- Run `npm run format` before committing
 
 ## Testing
 
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run with coverage
+npm run test:coverage
+```
+
+### Test Requirements for PRs
+
+All pull requests must:
+
+1. **Pass all existing tests** — CI will reject PRs with failing tests
+2. **Maintain 70% coverage** — Add tests for new functionality
+3. **Pass linting** — Run `npm run lint` before submitting
+4. **Pass formatting** — Run `npm run format:check`
+
+### Writing Tests
+
+- Place unit tests in `tests/unit/`
+- Use descriptive test names that explain the expected behavior
+- Mock external APIs using fixtures in `tests/fixtures/`
+- Test edge cases and error conditions
+
+### Manual Testing
+
 Before submitting:
 
-1. Run the bot locally
-2. Test all commands
-3. Verify audio embedding works
-4. Check error handling
+1. Run the bot locally with a test token
+2. Test all commands (`/start`, `/video`, `/audio`, `/text`)
+3. Verify media embedding works
+4. Check error handling with invalid inputs
 
 ## Questions
 

@@ -29,15 +29,23 @@ Nach Yomi is the daily study of Nevi'im (Prophets) and Ketuvim (Writings) — on
 
 ## Deploy Your Own
 
-### Option 1: Railway (Free, Recommended)
+### Option 1: GitHub Actions (Free, Recommended)
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/nachyomi?referralCode=nachyomi)
+The bot runs entirely on GitHub Actions — no server required!
 
-1. Click the button above
-2. Add your `TELEGRAM_BOT_TOKEN` (get one from [@BotFather](https://t.me/BotFather))
-3. Deploy — that's it!
+1. Fork this repository
+2. Go to **Settings → Secrets and variables → Actions**
+3. Add these secrets:
+   - `TELEGRAM_BOT_TOKEN` — Get from [@BotFather](https://t.me/BotFather)
+   - `TELEGRAM_CHANNEL_ID` — Your channel ID (e.g., `@YourChannel` or `-100123456789`)
+   - `ADMIN_CHAT_ID` — Your chat ID for error notifications (optional)
+4. Enable GitHub Actions in your fork
 
-Railway's free tier (500 hours/month) is plenty for this bot.
+**What runs automatically:**
+- **Daily broadcast** at 6:00 AM Israel time (handles DST)
+- **Command polling** every 5 minutes
+
+**Note:** Commands have up to 5-minute response latency due to the polling interval. For real-time responses, use Docker or Node.js deployment instead.
 
 ### Option 2: Docker
 
@@ -152,9 +160,20 @@ nachyomi-bot/
 │   ├── sefariaService.js     # Hebrew/English text fetching
 │   ├── messageBuilder.js     # Telegram message formatting
 │   ├── videoService.js       # HLS→MP4 conversion & splitting
+│   ├── utils/
+│   │   ├── commandParser.js  # Telegram command parsing
+│   │   └── rateLimiter.js    # Request rate limiting
 │   └── data/
 │       └── shiurMapping.js   # 929 shiur ID mappings (100% Nach coverage)
-├── .github/workflows/        # CI/CD pipelines
+├── scripts/
+│   ├── broadcast.js          # Standalone daily broadcast (GitHub Actions)
+│   └── poll-commands.js      # Command polling script (GitHub Actions)
+├── tests/
+│   ├── unit/                 # Unit tests (vitest)
+│   └── fixtures/             # Mock API responses
+├── .github/
+│   ├── workflows/            # CI/CD and bot automation
+│   └── state/                # Bot state persistence
 ├── Dockerfile                # Multi-stage production build
 ├── docker-compose.yml        # Container orchestration
 └── .env.example              # Environment template
@@ -166,10 +185,12 @@ nachyomi-bot/
 |-----------|------------|---------|
 | Runtime | Node.js 18+ | ES modules, async/await |
 | Bot Framework | node-telegram-bot-api | Telegram integration |
-| Scheduler | node-cron | Daily 6 AM posts |
+| Scheduler | GitHub Actions | Daily 6 AM posts, command polling |
 | Video Processing | FFmpeg | HLS stream conversion |
-| Containerization | Docker | Production deployment |
-| CI/CD | GitHub Actions | Automated builds |
+| Containerization | Docker | Alternative deployment |
+| CI/CD | GitHub Actions | Automated builds and bot operation |
+| Testing | Vitest | Unit tests with coverage |
+| Linting | ESLint + Prettier | Code quality |
 
 ### Data Flow
 
@@ -229,7 +250,7 @@ docker run -d -e TELEGRAM_BOT_TOKEN="token" nachyomi-bot
 
 | Platform | Instructions |
 |----------|--------------|
-| **Railway** | Connect repo, set `TELEGRAM_BOT_TOKEN`, deploy |
+| **GitHub Actions** | Fork repo, add secrets, enable Actions (recommended, free) |
 | **Render** | Use Docker runtime, set environment variables |
 | **Fly.io** | `fly launch`, set secrets with `fly secrets set` |
 | **DigitalOcean** | App Platform with Docker, set env vars |
@@ -306,6 +327,47 @@ Video/audio embedding is available for **all books** with complete shiur ID mapp
 | [Hebcal](https://hebcal.com) | Nach Yomi daily schedule | REST |
 | [Kol Halashon](https://kolhalashon.com) | Video/Audio shiurim | HLS/MP3 |
 | [Sefaria](https://sefaria.org) | Hebrew + English text | REST |
+
+## Development
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+### Code Quality
+
+```bash
+# Lint code
+npm run lint
+
+# Fix linting issues
+npm run lint:fix
+
+# Check formatting
+npm run format:check
+
+# Format code
+npm run format
+```
+
+### Coverage Targets
+
+The project maintains **70% code coverage** thresholds for:
+- Lines
+- Functions
+- Branches
+- Statements
+
+Coverage reports are generated in the `coverage/` directory.
 
 ## Contributing
 

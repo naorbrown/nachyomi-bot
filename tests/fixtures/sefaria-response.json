@@ -1,0 +1,18 @@
+{
+  "book": "Joshua",
+  "categories": ["Tanakh", "Prophets"],
+  "heTitle": "יהושע",
+  "he": [
+    "<p>וַיְהִי אַחֲרֵי מוֹת מֹשֶׁה עֶבֶד יְהֹוָה וַיֹּאמֶר יְהֹוָה אֶל־יְהוֹשֻׁעַ בִּן־נוּן מְשָׁרֵת מֹשֶׁה לֵאמֹר׃</p>",
+    "<p>מֹשֶׁה עַבְדִּי מֵת וְעַתָּה קוּם עֲבֹר אֶת־הַיַּרְדֵּן הַזֶּה אַתָּה וְכׇל־הָעָם הַזֶּה אֶל־הָאָרֶץ אֲשֶׁר אָנֹכִי נֹתֵן לָהֶם לִבְנֵי יִשְׂרָאֵל׃</p>",
+    "<p>כׇּל־מָקוֹם אֲשֶׁר תִּדְרֹךְ כַּף־רַגְלְכֶם בּוֹ לָכֶם נְתַתִּיו כַּאֲשֶׁר דִּבַּרְתִּי אֶל־מֹשֶׁה׃</p>"
+  ],
+  "text": [
+    "Now it came to pass after the death of Moses the servant of the LORD, that the LORD spoke unto Joshua the son of Nun, Moses' minister, saying:",
+    "Moses My servant is dead; now therefore arise, go over this Jordan, thou, and all this people, unto the land which I do give to them, even to the children of Israel.",
+    "Every place that the sole of your foot shall tread upon, to you have I given it, as I spoke unto Moses."
+  ],
+  "sectionNames": ["Chapter", "Verse"],
+  "length": 3,
+  "ref": "Joshua 1"
+}

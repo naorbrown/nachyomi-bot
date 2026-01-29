@@ -16,7 +16,7 @@ export function parseNachYomiTitle(title) {
   if (match) {
     return {
       book: match[1],
-      chapter: parseInt(match[2], 10)
+      chapter: parseInt(match[2], 10),
     };
   }
   return null;
@@ -58,7 +58,7 @@ export async function getTodaysNachYomi() {
       hebrew: nachYomiItem.hebrew,
       hebrewDate: nachYomiItem.hdate,
       date: nachYomiItem.date,
-      sefariaLink: nachYomiItem.link
+      sefariaLink: nachYomiItem.link,
     };
   } catch (error) {
     console.error('Error fetching Nach Yomi:', error);
@@ -70,9 +70,7 @@ export async function getTodaysNachYomi() {
  * Get Nach Yomi for a specific date
  */
 export async function getNachYomiForDate(date) {
-  const dateStr = date instanceof Date
-    ? date.toISOString().split('T')[0]
-    : date;
+  const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : date;
 
   try {
     const url = `https://www.hebcal.com/hebcal?v=1&cfg=json&nyomi=on&start=${dateStr}&end=${dateStr}`;
@@ -101,7 +99,7 @@ export async function getNachYomiForDate(date) {
       hebrew: nachYomiItem.hebrew,
       hebrewDate: nachYomiItem.hdate,
       date: nachYomiItem.date,
-      sefariaLink: nachYomiItem.link
+      sefariaLink: nachYomiItem.link,
     };
   } catch (error) {
     console.error('Error fetching Nach Yomi for date:', error);
@@ -113,12 +111,8 @@ export async function getNachYomiForDate(date) {
  * Get the Nach Yomi schedule for a date range
  */
 export async function getNachYomiRange(startDate, endDate) {
-  const startStr = startDate instanceof Date
-    ? startDate.toISOString().split('T')[0]
-    : startDate;
-  const endStr = endDate instanceof Date
-    ? endDate.toISOString().split('T')[0]
-    : endDate;
+  const startStr = startDate instanceof Date ? startDate.toISOString().split('T')[0] : startDate;
+  const endStr = endDate instanceof Date ? endDate.toISOString().split('T')[0] : endDate;
 
   try {
     const url = `https://www.hebcal.com/hebcal?v=1&cfg=json&nyomi=on&start=${startStr}&end=${endStr}`;
@@ -130,20 +124,24 @@ export async function getNachYomiRange(startDate, endDate) {
 
     const data = await response.json();
 
-    return data.items
-      ?.filter(item => item.category === 'nachyomi')
-      .map(item => {
-        const parsed = parseNachYomiTitle(item.title);
-        return parsed ? {
-          book: parsed.book,
-          chapter: parsed.chapter,
-          hebrew: item.hebrew,
-          hebrewDate: item.hdate,
-          date: item.date,
-          sefariaLink: item.link
-        } : null;
-      })
-      .filter(Boolean) || [];
+    return (
+      data.items
+        ?.filter(item => item.category === 'nachyomi')
+        .map(item => {
+          const parsed = parseNachYomiTitle(item.title);
+          return parsed
+            ? {
+                book: parsed.book,
+                chapter: parsed.chapter,
+                hebrew: item.hebrew,
+                hebrewDate: item.hdate,
+                date: item.date,
+                sefariaLink: item.link,
+              }
+            : null;
+        })
+        .filter(Boolean) || []
+    );
   } catch (error) {
     console.error('Error fetching Nach Yomi range:', error);
     return [];
