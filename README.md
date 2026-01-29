@@ -152,8 +152,14 @@ nachyomi-bot/
 │   ├── sefariaService.js     # Hebrew/English text fetching
 │   ├── messageBuilder.js     # Telegram message formatting
 │   ├── videoService.js       # HLS→MP4 conversion & splitting
+│   ├── utils/
+│   │   ├── commandParser.js  # Telegram command parsing
+│   │   └── rateLimiter.js    # Request rate limiting
 │   └── data/
 │       └── shiurMapping.js   # 929 shiur ID mappings (100% Nach coverage)
+├── tests/
+│   ├── unit/                 # Unit tests (vitest)
+│   └── fixtures/             # Mock API responses
 ├── .github/workflows/        # CI/CD pipelines
 ├── Dockerfile                # Multi-stage production build
 ├── docker-compose.yml        # Container orchestration
@@ -170,6 +176,8 @@ nachyomi-bot/
 | Video Processing | FFmpeg | HLS stream conversion |
 | Containerization | Docker | Production deployment |
 | CI/CD | GitHub Actions | Automated builds |
+| Testing | Vitest | Unit tests with coverage |
+| Linting | ESLint + Prettier | Code quality |
 
 ### Data Flow
 
@@ -306,6 +314,47 @@ Video/audio embedding is available for **all books** with complete shiur ID mapp
 | [Hebcal](https://hebcal.com) | Nach Yomi daily schedule | REST |
 | [Kol Halashon](https://kolhalashon.com) | Video/Audio shiurim | HLS/MP3 |
 | [Sefaria](https://sefaria.org) | Hebrew + English text | REST |
+
+## Development
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+### Code Quality
+
+```bash
+# Lint code
+npm run lint
+
+# Fix linting issues
+npm run lint:fix
+
+# Check formatting
+npm run format:check
+
+# Format code
+npm run format
+```
+
+### Coverage Targets
+
+The project maintains **80% code coverage** thresholds for:
+- Lines
+- Functions
+- Branches
+- Statements
+
+Coverage reports are generated in the `coverage/` directory.
 
 ## Contributing
 

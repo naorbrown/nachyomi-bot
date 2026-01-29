@@ -13,7 +13,7 @@ export async function getChapterText(book, chapter, options = {}) {
   const {
     includeHebrew = true,
     includeEnglish = true,
-    maxVerses = null // Limit number of verses (for long chapters)
+    maxVerses = null, // Limit number of verses (for long chapters)
   } = options;
 
   // Convert book name to Sefaria format
@@ -23,9 +23,9 @@ export async function getChapterText(book, chapter, options = {}) {
   try {
     const response = await fetch(url, {
       headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'NachYomiBot/1.0'
-      }
+        Accept: 'application/json',
+        'User-Agent': 'NachYomiBot/1.0',
+      },
     });
 
     if (!response.ok) {
@@ -63,7 +63,7 @@ export async function getChapterText(book, chapter, options = {}) {
         Array.isArray(data.he) ? data.he.length : 1,
         Array.isArray(data.text) ? data.text.length : 1
       ),
-      sefariaUrl: `https://www.sefaria.org/${sefariaBook}.${chapter}`
+      sefariaUrl: `https://www.sefaria.org/${sefariaBook}.${chapter}`,
     };
   } catch (error) {
     console.error(`Error fetching text for ${book} ${chapter}:`, error);
@@ -79,7 +79,7 @@ export function formatChapterForTelegram(chapterData, options = {}) {
     maxLength = 4000, // Telegram message limit is ~4096
     showHebrew = true,
     showEnglish = true,
-    versesPreview = 3 // Show first N verses as preview
+    versesPreview = 3, // Show first N verses as preview
   } = options;
 
   let message = '';

@@ -23,10 +23,10 @@ const TARGET_PART_SIZE = 45 * 1024 * 1024; // 45MB target for safety margin
  * Check if FFmpeg is available
  */
 export async function checkFfmpeg() {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const proc = spawn('ffmpeg', ['-version']);
     proc.on('error', () => resolve(false));
-    proc.on('close', (code) => resolve(code === 0));
+    proc.on('close', code => resolve(code === 0));
   });
 }
 
@@ -34,20 +34,23 @@ export async function checkFfmpeg() {
  * Get video duration using ffprobe
  */
 async function getVideoDuration(filePath) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     const proc = spawn('ffprobe', [
-      '-v', 'error',
-      '-show_entries', 'format=duration',
-      '-of', 'default=noprint_wrappers=1:nokey=1',
-      filePath
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'default=noprint_wrappers=1:nokey=1',
+      filePath,
     ]);
 
     let stdout = '';
-    proc.stdout.on('data', (data) => {
+    proc.stdout.on('data', data => {
       stdout += data.toString();
     });
 
-    proc.on('close', (code) => {
+    proc.on('close', code => {
       if (code === 0) {
         const duration = parseFloat(stdout.trim());
         resolve(isNaN(duration) ? null : duration);
@@ -71,10 +74,7 @@ export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
   } = options;
 
   return new Promise((resolve, reject) => {
-    const args = [
-      '-y',
-      '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
-    ];
+    const args = ['-y', '-protocol_whitelist', 'file,http,https,tcp,tls,crypto'];
 
     // Add start time if specified (for splitting)
     if (startTime !== null) {
@@ -88,12 +88,7 @@ export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
       args.push('-t', String(duration));
     }
 
-    args.push(
-      '-c', 'copy',
-      '-bsf:a', 'aac_adtstoasc',
-      '-movflags', '+faststart',
-      outputPath
-    );
+    args.push('-c', 'copy', '-bsf:a', 'aac_adtstoasc', '-movflags', '+faststart', outputPath);
 
     const durationStr = duration ? `${duration}s` : 'full';
     const startStr = startTime ? ` from ${startTime}s` : '';
@@ -102,7 +97,7 @@ export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
     const proc = spawn('ffmpeg', args);
 
     let stderr = '';
-    proc.stderr.on('data', (data) => {
+    proc.stderr.on('data', data => {
       stderr += data.toString();
     });
 
@@ -111,7 +106,7 @@ export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
       reject(new Error('FFmpeg timeout'));
     }, timeout);
 
-    proc.on('close', (code) => {
+    proc.on('close', code => {
       clearTimeout(timer);
       if (code === 0) {
         resolve(outputPath);
@@ -120,7 +115,7 @@ export async function convertHlsToMp4(hlsUrl, outputPath, options = {}) {
       }
     });
 
-    proc.on('error', (err) => {
+    proc.on('error', err => {
       clearTimeout(timer);
       reject(err);
     });
@@ -148,19 +143,26 @@ async function splitVideo(inputPath, shiurId, timestamp, totalDuration, fileSize
       await new Promise((resolve, reject) => {
         const args = [
           '-y',
-          '-ss', String(startTime),
-          '-i', inputPath,
-          '-t', String(partDuration),
-          '-c', 'copy',
-          '-movflags', '+faststart',
-          partPath
+          '-ss',
+          String(startTime),
+          '-i',
+          inputPath,
+          '-t',
+          String(partDuration),
+          '-c',
+          'copy',
+          '-movflags',
+          '+faststart',
+          partPath,
         ];
 
         const proc = spawn('ffmpeg', args);
         let stderr = '';
-        proc.stderr.on('data', (data) => { stderr += data.toString(); });
+        proc.stderr.on('data', data => {
+          stderr += data.toString();
+        });
 
-        proc.on('close', (code) => {
+        proc.on('close', code => {
           if (code === 0) resolve(partPath);
           else reject(new Error(`Split error: ${stderr.slice(-200)}`));
         });
@@ -176,7 +178,7 @@ async function splitVideo(inputPath, shiurId, timestamp, totalDuration, fileSize
         partNumber: i + 1,
         totalParts: numParts,
         startTime,
-        duration: partDuration
+        duration: partDuration,
       });
     } catch (error) {
       console.error(`Failed to create part ${i + 1}:`, error.message);
@@ -240,9 +242,8 @@ export async function prepareVideoForTelegram(hlsUrl, shiurId) {
     return {
       parts,
       totalSize: stats.size,
-      totalDuration: duration
+      totalDuration: duration,
     };
-
   } catch (error) {
     console.error('Video preparation failed:', error.message);
     await unlinkAsync(outputPath).catch(() => {});

@@ -23,22 +23,20 @@ import {
   buildKeyboard,
   buildMediaCaption,
   buildMediaKeyboard,
-  buildWelcomeMessage
+  buildWelcomeMessage,
 } from './messageBuilder.js';
-import { getShiurId, getShiurAudioUrl, getShiurVideoUrl, getShiurUrl } from './data/shiurMapping.js';
-import { prepareVideoForTelegram, cleanupVideo, cleanupVideoParts, checkFfmpeg } from './videoService.js';
-
-// ============================================
-// GLOBAL ERROR HANDLERS - Must be first!
-// ============================================
-process.on('unhandledRejection', (reason, promise) => {
-  console.error(`[${new Date().toISOString()}] UNHANDLED REJECTION:`, reason);
-});
-
-process.on('uncaughtException', (err) => {
-  console.error(`[${new Date().toISOString()}] UNCAUGHT EXCEPTION:`, err);
-  // Don't exit - try to keep running
-});
+import {
+  getShiurId,
+  getShiurAudioUrl,
+  getShiurVideoUrl,
+  getShiurUrl,
+} from './data/shiurMapping.js';
+import {
+  prepareVideoForTelegram,
+  cleanupVideo,
+  cleanupVideoParts,
+  checkFfmpeg,
+} from './videoService.js';
 
 // Configuration
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -52,7 +50,6 @@ if (!BOT_TOKEN) {
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 let ffmpegAvailable = false;
-let botReady = false;  // Guard against commands before initialization
 
 // Rate limiting: 5 requests per minute per user
 const rateLimits = new Map();
@@ -83,45 +80,23 @@ function isRateLimited(chatId) {
   return false;
 }
 
-// Initialize with proper error handling
+// Initialize
 (async () => {
-  console.log(`[${new Date().toISOString()}] Nach Yomi Bot starting...`);
+  ffmpegAvailable = await checkFfmpeg();
 
-  try {
-    // Check FFmpeg availability
-    ffmpegAvailable = await checkFfmpeg();
-    console.log(`[${new Date().toISOString()}] FFmpeg: ${ffmpegAvailable ? 'available' : 'not available'}`);
+  // Set bot commands programmatically
+  await bot.setMyCommands([
+    { command: 'today', description: "Get today's Nach Yomi" },
+    { command: 'start', description: "Get today's shiur" },
+    { command: 'video', description: 'Watch the video shiur' },
+    { command: 'audio', description: 'Listen to the audio shiur' },
+    { command: 'text', description: 'Read the chapter' },
+  ]);
 
-    // Set bot commands programmatically
-    await bot.setMyCommands([
-      { command: 'today', description: "Get today's Nach Yomi" },
-      { command: 'start', description: "Get today's shiur" },
-      { command: 'video', description: 'Watch the video shiur' },
-      { command: 'audio', description: 'Listen to the audio shiur' },
-      { command: 'text', description: 'Read the chapter' }
-    ]);
-    console.log(`[${new Date().toISOString()}] Commands registered with Telegram`);
-
-    // Mark bot as ready to accept commands
-    botReady = true;
-    console.log(`[${new Date().toISOString()}] Nach Yomi Bot is READY and accepting commands`);
-
-  } catch (err) {
-    console.error(`[${new Date().toISOString()}] Initialization error:`, err.message);
-    // Still mark as ready - bot can work without setMyCommands
-    botReady = true;
-    console.log(`[${new Date().toISOString()}] Bot marked ready despite init error`);
-  }
+  console.log('Nach Yomi Bot started');
+  console.log(`FFmpeg: ${ffmpegAvailable ? 'yes' : 'no'}`);
+  console.log('Commands registered');
 })();
-
-/**
- * Format duration in minutes:seconds
- */
-function formatDuration(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
 
 /**
  * Send video shiur for a chapter
@@ -129,24 +104,33 @@ function formatDuration(seconds) {
  */
 async function sendVideoShiur(chatId, nachYomi, shiurId) {
   if (!ffmpegAvailable) {
-    await bot.sendMessage(chatId, '_Video requires FFmpeg. Use /audio instead._', { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, '_Video requires FFmpeg. Use /audio instead._', {
+      parse_mode: 'Markdown',
+    });
     return false;
   }
 
   if (!shiurId) {
-    await bot.sendMessage(chatId, '_No video mapped for this chapter yet. Use /audio for the full shiur._', { parse_mode: 'Markdown' });
+    await bot.sendMessage(
+      chatId,
+      '_No video mapped for this chapter yet. Use /audio for the full shiur._',
+      { parse_mode: 'Markdown' }
+    );
     return false;
   }
 
   try {
-    const statusMsg = await bot.sendMessage(chatId, '🎬 _Converting full video shiur (this may take several minutes)..._', { parse_mode: 'Markdown' });
+    const statusMsg = await bot.sendMessage(
+      chatId,
+      '🎬 _Converting full video shiur (this may take several minutes)..._',
+      { parse_mode: 'Markdown' }
+    );
 
     const videoUrl = getShiurVideoUrl(shiurId);
     const videoResult = await prepareVideoForTelegram(videoUrl, shiurId);
 
     // Delete status message
-    await bot.deleteMessage(chatId, statusMsg.message_id)
-      .catch(err => console.log('Could not delete status message:', err.message));
+    await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
 
     if (!videoResult) {
       throw new Error('Video preparation failed');
@@ -155,10 +139,11 @@ async function sendVideoShiur(chatId, nachYomi, shiurId) {
     if (videoResult.tooLarge) {
       // Splitting failed - provide external link
       const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
-      await bot.sendMessage(chatId,
+      await bot.sendMessage(
+        chatId,
         `🎬 *Video Shiur*\n\n` +
-        `The video could not be processed for Telegram.\n\n` +
-        `[Watch on Kol Halashon](${shiurPageUrl})`,
+          `The video could not be processed for Telegram.\n\n` +
+          `[Watch on Kol Halashon](${shiurPageUrl})`,
         { parse_mode: 'Markdown', disable_web_page_preview: true }
       );
       return false;
@@ -169,24 +154,27 @@ async function sendVideoShiur(chatId, nachYomi, shiurId) {
       const { parts, totalDuration } = videoResult;
       const totalMins = Math.round(totalDuration / 60);
 
-      await bot.sendMessage(chatId,
+      await bot.sendMessage(
+        chatId,
         `🎬 *${nachYomi.book} ${nachYomi.chapter}* — Full Video Shiur\n\n` +
-        `_Total duration: ~${totalMins} minutes_\n` +
-        `_Sending in ${parts.length} parts..._`,
+          `_Total duration: ~${totalMins} minutes_\n` +
+          `_Sending in ${parts.length} parts..._`,
         { parse_mode: 'Markdown' }
       );
 
       for (const part of parts) {
-        const partCaption = `🎬 *Part ${part.partNumber}/${part.totalParts}*\n` +
+        const partCaption =
+          `🎬 *Part ${part.partNumber}/${part.totalParts}*\n` +
           `_${nachYomi.book} ${nachYomi.chapter}_ · Rav Yitzchok Breitowitz`;
 
         await bot.sendVideo(chatId, createReadStream(part.path), {
           caption: partCaption,
           parse_mode: 'Markdown',
           supports_streaming: true,
-          reply_markup: part.partNumber === part.totalParts
-            ? buildMediaKeyboard(nachYomi.book, nachYomi.chapter)
-            : undefined
+          reply_markup:
+            part.partNumber === part.totalParts
+              ? buildMediaKeyboard(nachYomi.book, nachYomi.chapter)
+              : undefined,
         });
       }
 
@@ -201,23 +189,25 @@ async function sendVideoShiur(chatId, nachYomi, shiurId) {
         caption: buildMediaCaption(nachYomi, 'video'),
         parse_mode: 'Markdown',
         reply_markup: buildMediaKeyboard(nachYomi.book, nachYomi.chapter),
-        supports_streaming: true
+        supports_streaming: true,
       });
       await cleanupVideo(videoResult.path);
       console.log(`Video sent: ${nachYomi.book} ${nachYomi.chapter}`);
       return true;
     }
-
   } catch (err) {
     console.warn('Video failed:', err.message);
     // Notify user of failure with fallback link
     const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
-    await bot.sendMessage(chatId,
-      `🎬 *Video Shiur*\n\n` +
-      `Video conversion failed. Watch on Kol Halashon instead:\n\n` +
-      `[Watch Full Shiur](${shiurPageUrl})`,
-      { parse_mode: 'Markdown', disable_web_page_preview: true }
-    ).catch(err => console.error('Failed to send video fallback:', err.message));
+    await bot
+      .sendMessage(
+        chatId,
+        `🎬 *Video Shiur*\n\n` +
+          `Video conversion failed. Watch on Kol Halashon instead:\n\n` +
+          `[Watch Full Shiur](${shiurPageUrl})`,
+        { parse_mode: 'Markdown', disable_web_page_preview: true }
+      )
+      .catch(() => {});
   }
   return false;
 }
@@ -229,10 +219,11 @@ async function sendAudioShiur(chatId, nachYomi, shiurId) {
   if (!shiurId) {
     // No specific shiur ID - provide link to Kol Halashon page
     const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
-    await bot.sendMessage(chatId,
+    await bot.sendMessage(
+      chatId,
       `🎧 *Audio Shiur*\n\n` +
-      `No embedded audio available for ${nachYomi.book} ${nachYomi.chapter}.\n\n` +
-      `[Listen on Kol Halashon](${shiurPageUrl})`,
+        `No embedded audio available for ${nachYomi.book} ${nachYomi.chapter}.\n\n` +
+        `[Listen on Kol Halashon](${shiurPageUrl})`,
       { parse_mode: 'Markdown', disable_web_page_preview: true }
     );
     return false;
@@ -245,7 +236,7 @@ async function sendAudioShiur(chatId, nachYomi, shiurId) {
       performer: 'Rav Yitzchok Breitowitz',
       caption: buildMediaCaption(nachYomi, 'audio'),
       parse_mode: 'Markdown',
-      reply_markup: buildMediaKeyboard(nachYomi.book, nachYomi.chapter)
+      reply_markup: buildMediaKeyboard(nachYomi.book, nachYomi.chapter),
     });
     console.log(`Audio sent: ${nachYomi.book} ${nachYomi.chapter}`);
     return true;
@@ -253,12 +244,15 @@ async function sendAudioShiur(chatId, nachYomi, shiurId) {
     console.warn('Audio failed:', err.message);
     // Notify user of failure with fallback link
     const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
-    await bot.sendMessage(chatId,
-      `🎧 *Audio Shiur*\n\n` +
-      `Audio loading failed. Listen on Kol Halashon instead:\n\n` +
-      `[Listen to Full Shiur](${shiurPageUrl})`,
-      { parse_mode: 'Markdown', disable_web_page_preview: true }
-    ).catch(err => console.error('Failed to send audio fallback:', err.message));
+    await bot
+      .sendMessage(
+        chatId,
+        `🎧 *Audio Shiur*\n\n` +
+          `Audio loading failed. Listen on Kol Halashon instead:\n\n` +
+          `[Listen to Full Shiur](${shiurPageUrl})`,
+        { parse_mode: 'Markdown', disable_web_page_preview: true }
+      )
+      .catch(() => {});
     return false;
   }
 }
@@ -274,7 +268,7 @@ async function sendChapterText(chatId, nachYomi, chapterText) {
     await bot.sendMessage(chatId, messages[i], {
       parse_mode: 'Markdown',
       reply_markup: isLastMessage ? buildKeyboard(nachYomi.book, nachYomi.chapter) : undefined,
-      disable_web_page_preview: true
+      disable_web_page_preview: true,
     });
   }
 
@@ -316,12 +310,10 @@ async function sendDailyNachYomi(chatId, options = {}) {
     }
 
     return true;
-
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Send failed:`, error.message);
+    console.error('Send failed:', error.message);
     if (ADMIN_CHAT_ID) {
-      bot.sendMessage(ADMIN_CHAT_ID, `❌ Error: ${error.message}`)
-        .catch(err => console.error('Failed to notify admin:', err.message));
+      bot.sendMessage(ADMIN_CHAT_ID, `❌ Error: ${error.message}`).catch(() => {});
     }
     throw error;
   }
@@ -352,9 +344,8 @@ function parseCommand(text) {
 
   // Parse command name (remove / and optional @botname)
   const atIndex = commandPart.indexOf('@');
-  const command = atIndex > 0
-    ? commandPart.slice(1, atIndex).toLowerCase()
-    : commandPart.slice(1).toLowerCase();
+  const command =
+    atIndex > 0 ? commandPart.slice(1, atIndex).toLowerCase() : commandPart.slice(1).toLowerCase();
 
   if (!command) return null;
 
@@ -362,105 +353,91 @@ function parseCommand(text) {
 }
 
 // Single message handler for all commands
-bot.on('message', async (msg) => {
-  // OUTER TRY-CATCH: Ensures we NEVER silently fail
+bot.on('message', async msg => {
+  // Skip non-text messages
+  if (!msg.text) return;
+
+  const parsed = parseCommand(msg.text);
+  if (!parsed) return;
+
+  const { command } = parsed;
+  const chatId = msg.chat.id;
+
+  console.log(`[${new Date().toISOString()}] Command received: /${command} from chat ${chatId}`);
+
+  // Rate limit check (except for broadcast which is admin-only)
+  if (command !== 'broadcast' && isRateLimited(chatId)) {
+    return bot.sendMessage(chatId, '_Please wait a moment before trying again._', {
+      parse_mode: 'Markdown',
+    });
+  }
+
   try {
-    // Guard: Bot must be initialized
-    if (!botReady) {
-      console.log(`[${new Date().toISOString()}] Message received but bot not ready yet`);
-      return;
-    }
-
-    // Skip non-text messages
-    if (!msg.text) return;
-
-    const parsed = parseCommand(msg.text);
-    if (!parsed) return;
-
-    const { command } = parsed;
-    const chatId = msg.chat.id;
-
-    console.log(`[${new Date().toISOString()}] Command received: /${command} from chat ${chatId}`);
-
-    // Rate limit check (except for broadcast which is admin-only)
-    if (command !== 'broadcast' && isRateLimited(chatId)) {
-      await bot.sendMessage(chatId, '_Please wait a moment before trying again._', { parse_mode: 'Markdown' });
-      return;
-    }
-
-    try {
-      switch (command) {
-        case 'start':
-        case 'today': {
-          // Send immediate acknowledgment
-          await bot.sendMessage(chatId, '📖 _Loading today\'s Nach Yomi..._', { parse_mode: 'Markdown' });
-          await bot.sendMessage(chatId, buildWelcomeMessage(), { parse_mode: 'Markdown' });
-          await sendDailyNachYomi(chatId);
-          break;
-        }
-
-        case 'video': {
-          await bot.sendMessage(chatId, '🎬 _Loading video..._', { parse_mode: 'Markdown' });
-          const nachYomi = await getTodaysNachYomi();
-          const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-          await sendVideoShiur(chatId, nachYomi, shiurId);
-          break;
-        }
-
-        case 'audio': {
-          await bot.sendMessage(chatId, '🎧 _Loading audio..._', { parse_mode: 'Markdown' });
-          const nachYomi = await getTodaysNachYomi();
-          const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-          await sendAudioShiur(chatId, nachYomi, shiurId);
-          break;
-        }
-
-        case 'text': {
-          await bot.sendMessage(chatId, '📜 _Loading text..._', { parse_mode: 'Markdown' });
-          const nachYomi = await getTodaysNachYomi();
-          const chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null }).catch(() => null);
-          await sendChapterText(chatId, nachYomi, chapterText);
-          break;
-        }
-
-        case 'broadcast': {
-          // Admin only
-          if (ADMIN_CHAT_ID && chatId.toString() !== ADMIN_CHAT_ID) {
-            console.log(`[${new Date().toISOString()}] Unauthorized broadcast attempt from ${chatId}`);
-            return;
-          }
-          if (!CHANNEL_ID) {
-            await bot.sendMessage(chatId, 'No channel configured.');
-            return;
-          }
-          await bot.sendMessage(chatId, '📡 _Broadcasting..._', { parse_mode: 'Markdown' });
-          await sendDailyNachYomi(CHANNEL_ID);
-          await bot.sendMessage(chatId, '✅ Broadcast sent.');
-          break;
-        }
-
-        default:
-          // Unknown command - ignore silently
-          return;
+    switch (command) {
+      case 'start':
+      case 'today': {
+        await bot.sendMessage(chatId, buildWelcomeMessage(), { parse_mode: 'Markdown' });
+        await sendDailyNachYomi(chatId);
+        break;
       }
-    } catch (err) {
-      console.error(`[${new Date().toISOString()}] Command /${command} failed:`, err.message, err.stack);
 
-      const errorMessages = {
-        start: '❌ Error loading chapter. Please try again.',
-        today: '❌ Error loading chapter. Please try again.',
-        video: `❌ Video error: ${err.message}`,
-        audio: `❌ Audio error: ${err.message}`,
-        text: '❌ Error fetching text. Please try again.',
-        broadcast: `❌ Broadcast failed: ${err.message}`
-      };
+      case 'video': {
+        const nachYomi = await getTodaysNachYomi();
+        const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
+        await sendVideoShiur(chatId, nachYomi, shiurId);
+        break;
+      }
 
-      await bot.sendMessage(chatId, errorMessages[command] || '❌ An error occurred. Please try again.')
-        .catch(sendErr => console.error(`[${new Date().toISOString()}] Failed to send error message:`, sendErr.message));
+      case 'audio': {
+        const nachYomi = await getTodaysNachYomi();
+        const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
+        await sendAudioShiur(chatId, nachYomi, shiurId);
+        break;
+      }
+
+      case 'text': {
+        const nachYomi = await getTodaysNachYomi();
+        const chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, {
+          maxVerses: null,
+        }).catch(() => null);
+        await sendChapterText(chatId, nachYomi, chapterText);
+        break;
+      }
+
+      case 'broadcast': {
+        // Admin only
+        if (ADMIN_CHAT_ID && chatId.toString() !== ADMIN_CHAT_ID) {
+          console.log(`Unauthorized broadcast attempt from ${chatId}`);
+          return;
+        }
+        if (!CHANNEL_ID) {
+          await bot.sendMessage(chatId, 'No channel configured.');
+          return;
+        }
+        await sendDailyNachYomi(CHANNEL_ID);
+        await bot.sendMessage(chatId, '✅ Broadcast sent.');
+        break;
+      }
+
+      default:
+        // Unknown command - ignore silently
+        return;
     }
-  } catch (outerErr) {
-    // This catches ANY error including issues with msg object itself
-    console.error(`[${new Date().toISOString()}] CRITICAL: Message handler outer error:`, outerErr.message, outerErr.stack);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Command /${command} failed:`, err.message);
+
+    const errorMessages = {
+      start: '❌ Error loading chapter. Please try again.',
+      today: '❌ Error loading chapter. Please try again.',
+      video: `❌ Error: ${err.message}`,
+      audio: `❌ Error: ${err.message}`,
+      text: '❌ Error fetching text.',
+      broadcast: `❌ Broadcast failed: ${err.message}`,
+    };
+
+    await bot
+      .sendMessage(chatId, errorMessages[command] || '❌ An error occurred.')
+      .catch(() => {});
   }
 });
 
@@ -482,12 +459,14 @@ async function runScheduledBroadcast() {
       await sendDailyNachYomi(CHANNEL_ID);
       console.log(`[${new Date().toISOString()}] Scheduled broadcast completed successfully`);
       if (ADMIN_CHAT_ID) {
-        bot.sendMessage(ADMIN_CHAT_ID, `✅ Daily broadcast sent successfully`)
-          .catch(err => console.error('Failed to notify admin of success:', err.message));
+        bot.sendMessage(ADMIN_CHAT_ID, `✅ Daily broadcast sent successfully`).catch(() => {});
       }
       return; // Success - exit retry loop
     } catch (err) {
-      console.error(`[${new Date().toISOString()}] Broadcast attempt ${attempt}/${MAX_RETRIES} failed:`, err.message);
+      console.error(
+        `[${new Date().toISOString()}] Broadcast attempt ${attempt}/${MAX_RETRIES} failed:`,
+        err.message
+      );
 
       if (attempt < MAX_RETRIES) {
         const delay = RETRY_DELAYS[attempt - 1];
@@ -497,8 +476,12 @@ async function runScheduledBroadcast() {
         // All retries exhausted
         console.error(`[${new Date().toISOString()}] All broadcast attempts failed`);
         if (ADMIN_CHAT_ID) {
-          bot.sendMessage(ADMIN_CHAT_ID, `❌ Scheduled broadcast failed after ${MAX_RETRIES} attempts: ${err.message}`)
-            .catch(notifyErr => console.error('Failed to notify admin of failure:', notifyErr.message));
+          bot
+            .sendMessage(
+              ADMIN_CHAT_ID,
+              `❌ Scheduled broadcast failed after ${MAX_RETRIES} attempts: ${err.message}`
+            )
+            .catch(() => {});
         }
       }
     }
@@ -515,18 +498,8 @@ if (CHANNEL_ID) {
 // ERROR HANDLERS
 // ============================================
 
-bot.on('polling_error', (err) => {
-  console.error(`[${new Date().toISOString()}] POLLING ERROR:`, err.message);
-  // Notify admin of polling issues
-  if (ADMIN_CHAT_ID) {
-    bot.sendMessage(ADMIN_CHAT_ID, `⚠️ Polling error: ${err.message}`)
-      .catch(sendErr => console.error('Failed to notify admin:', sendErr.message));
-  }
-});
-
-bot.on('error', (err) => {
-  console.error(`[${new Date().toISOString()}] BOT ERROR:`, err.message);
-});
+bot.on('polling_error', err => console.error('Polling error:', err.message));
+bot.on('error', err => console.error('Bot error:', err.message));
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

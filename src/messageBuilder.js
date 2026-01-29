@@ -71,8 +71,10 @@ export function buildMediaCaption(nachYomi, mediaType = 'video') {
   const hebrewName = hebrewNames[book] || book;
   const icon = mediaType === 'video' ? '🎬' : '🎧';
 
-  return `${icon} *${book} ${chapter}* · ${hebrewName} ${toHebrewNumerals(chapter)}\n` +
-         `_Rav Yitzchok Breitowitz_`;
+  return (
+    `${icon} *${book} ${chapter}* · ${hebrewName} ${toHebrewNumerals(chapter)}\n` +
+    `_Rav Yitzchok Breitowitz_`
+  );
 }
 
 /**
@@ -86,12 +88,10 @@ export function buildKeyboard(book, chapter) {
     inline_keyboard: [
       [
         { text: '🎬 Full Shiur', url: shiurUrl },
-        { text: '📖 Sefaria', url: sefariaUrl }
+        { text: '📖 Sefaria', url: sefariaUrl },
       ],
-      [
-        { text: '📤 Share', switch_inline_query: `Nach Yomi: ${book} ${chapter}` }
-      ]
-    ]
+      [{ text: '📤 Share', switch_inline_query: `Nach Yomi: ${book} ${chapter}` }],
+    ],
   };
 }
 
@@ -106,9 +106,9 @@ export function buildMediaKeyboard(book, chapter) {
     inline_keyboard: [
       [
         { text: '🌐 Full Shiur', url: shiurUrl },
-        { text: '📖 Sefaria', url: sefariaUrl }
-      ]
-    ]
+        { text: '📖 Sefaria', url: sefariaUrl },
+      ],
+    ],
   };
 }
 
