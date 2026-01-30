@@ -1,6 +1,6 @@
 {
   "name": "nachyomi-bot",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Daily Nach Yomi with full video and audio shiurim from Rav Breitowitz via Kol Halashon",
   "main": "src/index.js",
   "type": "module",
