@@ -39,9 +39,37 @@ docs: update deployment instructions
 git clone https://github.com/naorbrown/nachyomi-bot.git
 cd nachyomi-bot
 npm install
-export TELEGRAM_BOT_TOKEN="your-test-token"
+cp .env.example .env
+# Edit .env with your test bot token
 npm run dev
 ```
+
+## GitHub Actions Workflows
+
+The bot runs on GitHub Actions (free). Key workflows:
+
+| Workflow | Schedule | Purpose |
+|----------|----------|---------|
+| `daily-broadcast.yml` | 3 AM + 4 AM UTC | Sends 6 AM Israel broadcast (handles DST) |
+| `poll-commands.yml` | Every 5 minutes | Responds to bot commands |
+| `ci.yml` | On push/PR | Runs lint, format, and tests |
+
+### Testing Broadcasts Locally
+
+```bash
+# Force a broadcast (bypasses 6am check)
+FORCE_BROADCAST=true node scripts/broadcast.js
+
+# Test command polling
+node scripts/poll-commands.js
+```
+
+### Manual Workflow Triggers
+
+1. Go to **Actions** tab on GitHub
+2. Select **Daily Broadcast** or **Poll Commands**
+3. Click **Run workflow**
+4. For broadcasts, check **Force broadcast** to bypass time check
 
 ## Code Style
 
