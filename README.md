@@ -15,6 +15,19 @@
 
 ---
 
+## Quick Start (Users)
+
+**Just want to learn Nach Yomi?** No setup required!
+
+1. Open Telegram
+2. Search for **@NachYomi_Bot** or [click here](https://t.me/NachYomi_Bot)
+3. Press **Start** or send `/start`
+4. Receive today's chapter with video, audio, and text
+
+**Want daily posts in your channel?** Subscribe to [@TorahYomiChannelBot](https://t.me/TorahYomiChannelBot) for automatic 6 AM Israel time broadcasts.
+
+---
+
 ## What is Nach Yomi?
 
 Nach Yomi is the daily study of Nevi'im (Prophets) and Ketuvim (Writings) — one chapter per day, completing all 929 chapters in about 2.5 years. This bot delivers each day's chapter with **full video and audio shiurim** by Harav Yitzchok Breitowitz שליט״א embedded directly in Telegram.

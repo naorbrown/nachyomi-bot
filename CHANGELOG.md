@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-01-30
+
+### Added
+
+- **GitHub Actions deployment** — Bot runs entirely on GitHub Actions (free, no server required)
+- **Daily broadcast workflow** — Automatic 6 AM Israel time posts with DST handling
+- **Command polling workflow** — Responds to bot commands every 5 minutes
+- **Israel timezone utilities** — DST-aware time checking for reliable scheduling
+- **FORCE_BROADCAST option** — Manual trigger for testing broadcasts anytime
+- **Comprehensive test suite** — 131 unit tests with 70%+ code coverage
+- **Workflow regression tests** — Automated tests prevent workflow misconfiguration
+- **Detailed broadcast logging** — Debug logs show exactly what's happening during broadcasts
+
+### Changed
+
+- Migrated from Railway to GitHub Actions for cost-free hosting
+- Broadcast script no longer uses retry loop (prevents duplicate messages)
+- Improved error handling — video/audio/text send independently (one failure doesn't stop others)
+
+### Fixed
+
+- **Duplicate messages bug** — Removed retry loop that caused video/audio to resend on text failure
+- **6 AM delivery timing** — Fixed DST handling with dual UTC schedules (3 AM + 4 AM UTC)
+- **Midnight edge case** — Fixed `getIsraelHour()` returning 24 instead of 0
+- **Poll Commands workflow** — Added write permissions for state persistence
+- **ESLint errors** — Removed unused imports and variables
+- **Formatting issues** — Fixed Prettier code style violations
+
 ## [2.0.0] - 2026-01-27
 
 ### Added
