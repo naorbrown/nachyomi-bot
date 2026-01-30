@@ -485,7 +485,6 @@ async function sendToUnifiedChannel() {
 
     await publishTextToUnified(summaryText);
     console.log('Published to unified channel successfully');
-
   } catch (error) {
     console.error('Unified channel publish failed:', error.message);
     // Don't throw - unified channel failure shouldn't affect primary bot

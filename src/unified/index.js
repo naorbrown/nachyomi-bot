@@ -81,7 +81,7 @@ export async function publishTextToUnified(text, options = {}) {
         parse_mode: 'Markdown',
         disable_notification: false,
         disable_web_page_preview: true,
-        ...options
+        ...options,
       });
       console.log(`[TorahYomi] Published text to unified channel`);
       return true;
@@ -122,7 +122,7 @@ export async function publishVideoToUnified(video, caption, options = {}) {
         caption: formattedCaption,
         parse_mode: 'Markdown',
         supports_streaming: true,
-        ...options
+        ...options,
       });
       console.log(`[TorahYomi] Published video to unified channel`);
       return true;
@@ -160,7 +160,7 @@ export async function publishAudioToUnified(audio, caption, options = {}) {
       await bot.sendAudio(UNIFIED_CHANNEL_ID, audio, {
         caption: formattedCaption,
         parse_mode: 'Markdown',
-        ...options
+        ...options,
       });
       console.log(`[TorahYomi] Published audio to unified channel`);
       return true;
@@ -239,5 +239,5 @@ export default {
   publishTextToUnified,
   publishVideoToUnified,
   publishAudioToUnified,
-  publishDailyToUnified
+  publishDailyToUnified,
 };
