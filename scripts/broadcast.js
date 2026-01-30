@@ -209,6 +209,12 @@ async function sendChapterText(chatId, nachYomi, chapterText) {
 }
 
 async function runBroadcast() {
+  console.log('=== BROADCAST SCRIPT STARTED ===');
+  console.log(`Current time (UTC): ${new Date().toISOString()}`);
+  console.log(`Israel hour: ${getIsraelHour()}`);
+  console.log(`CHANNEL_ID: ${CHANNEL_ID}`);
+  console.log(`FORCE_BROADCAST: ${FORCE_BROADCAST}`);
+
   // Check if it's actually 6am Israel time (handles DST automatically)
   // This allows us to schedule at both 3am and 4am UTC and skip the wrong one
   // FORCE_BROADCAST=true bypasses this check for manual triggers
@@ -221,6 +227,8 @@ async function runBroadcast() {
 
   if (FORCE_BROADCAST) {
     console.log('FORCE_BROADCAST enabled, bypassing time check');
+  } else {
+    console.log('Time check passed: It is 6am Israel time');
   }
 
   // NO RETRY LOOP: Retrying would cause duplicate messages if video/audio
@@ -238,30 +246,39 @@ async function runBroadcast() {
   const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
 
   // Send video (function handles its own errors, but wrap just in case)
+  console.log('--- Sending video ---');
   try {
-    await sendVideoShiur(CHANNEL_ID, nachYomi, shiurId, ffmpegAvailable);
+    const videoResult = await sendVideoShiur(CHANNEL_ID, nachYomi, shiurId, ffmpegAvailable);
+    console.log(`Video result: ${videoResult ? 'sent' : 'skipped/failed'}`);
   } catch (err) {
     console.error('Video send failed unexpectedly:', err.message);
   }
 
   // Send audio (function handles its own errors, but wrap just in case)
+  console.log('--- Sending audio ---');
   if (shiurId) {
     try {
-      await sendAudioShiur(CHANNEL_ID, nachYomi, shiurId);
+      const audioResult = await sendAudioShiur(CHANNEL_ID, nachYomi, shiurId);
+      console.log(`Audio result: ${audioResult ? 'sent' : 'skipped/failed'}`);
     } catch (err) {
       console.error('Audio send failed unexpectedly:', err.message);
     }
+  } else {
+    console.log('No shiur ID, skipping audio');
   }
 
   // Send text
+  console.log('--- Sending text ---');
   let chapterText = null;
   try {
     chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null });
+    console.log(`Text fetched: ${chapterText ? 'yes' : 'no'}`);
   } catch (err) {
     console.warn('Text fetch failed:', err.message);
   }
   try {
     await sendChapterText(CHANNEL_ID, nachYomi, chapterText);
+    console.log('Text sent successfully');
   } catch (err) {
     console.error('Text send failed:', err.message);
   }
