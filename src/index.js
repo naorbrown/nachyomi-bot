@@ -24,7 +24,7 @@ import { addSubscriber, loadSubscribers } from './utils/subscribers.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
+const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
 
 if (!BOT_TOKEN) {
   console.error('TELEGRAM_BOT_TOKEN required');
