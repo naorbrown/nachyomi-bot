@@ -10,13 +10,19 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.js'],
-      exclude: ['src/index.js'], // Entry point with side effects
+      exclude: [
+        'src/index.js', // Entry point with side effects
+        'src/hebcalService.js', // External API calls
+        'src/sefariaService.js', // External API calls
+        'src/videoService.js', // Legacy, no longer used in main flow
+        'src/unified/**', // External API calls
+      ],
       thresholds: {
         lines: 70,
         branches: 65,
         functions: 70,
-        statements: 70
-      }
+        statements: 70,
+      },
     },
     testTimeout: 10000
   }

@@ -202,6 +202,21 @@ describe('buildWelcomeMessage', () => {
     expect(message).toContain('/text');
   });
 
+  it('should describe /start as including audio, video link, and text', () => {
+    const message = buildWelcomeMessage();
+    expect(message).toMatch(/\/start.*audio.*video.*text/i);
+  });
+
+  it('should describe /video as providing a link', () => {
+    const message = buildWelcomeMessage();
+    expect(message).toMatch(/\/video.*link/i);
+  });
+
+  it('should describe /audio as listen', () => {
+    const message = buildWelcomeMessage();
+    expect(message).toMatch(/\/audio.*[Ll]isten/);
+  });
+
   it('should mention 6 AM Israel time', () => {
     const message = buildWelcomeMessage();
     expect(message).toContain('6 AM Israel');

@@ -5,13 +5,14 @@
  * Sends the daily Nach Yomi message to the configured channel.
  * Designed to run as a one-shot job, not a long-running process.
  *
+ * Content order: Audio (primary) → Video Link → Text
+ *
  * Usage: node scripts/broadcast.js
  * Requires: TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID environment variables
  */
 
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
-import { createReadStream } from 'fs';
 import { getTodaysNachYomi } from '../src/hebcalService.js';
 import { getChapterText } from '../src/sefariaService.js';
 import {
@@ -20,18 +21,7 @@ import {
   buildMediaCaption,
   buildMediaKeyboard,
 } from '../src/messageBuilder.js';
-import {
-  getShiurId,
-  getShiurAudioUrl,
-  getShiurVideoUrl,
-  getShiurUrl,
-} from '../src/data/shiurMapping.js';
-import {
-  prepareVideoForTelegram,
-  cleanupVideo,
-  cleanupVideoParts,
-  checkFfmpeg,
-} from '../src/videoService.js';
+import { getShiurId, getShiurAudioUrl, getShiurUrl } from '../src/data/shiurMapping.js';
 import { isIsrael6am, getIsraelHour } from '../src/utils/israelTime.js';
 import { isUnifiedChannelEnabled, publishTextToUnified } from '../src/unified/index.js';
 
@@ -53,103 +43,31 @@ if (!CHANNEL_ID) {
 // Create bot without polling (one-shot mode)
 const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
-async function sendVideoShiur(chatId, nachYomi, shiurId, ffmpegAvailable) {
-  if (!ffmpegAvailable) {
-    console.log('FFmpeg not available, skipping video');
-    return false;
-  }
-
-  if (!shiurId) {
-    console.log('No shiur ID for video');
-    return false;
-  }
+/**
+ * Send video shiur link for a chapter
+ * Sends a link to watch the video on Kol Halashon
+ */
+async function sendVideoLink(chatId, nachYomi, shiurId) {
+  const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
 
   try {
-    const statusMsg = await bot.sendMessage(
+    await bot.sendMessage(
       chatId,
-      '🎬 _Converting full video shiur (this may take several minutes)..._',
-      { parse_mode: 'Markdown' }
-    );
-
-    const videoUrl = getShiurVideoUrl(shiurId);
-    const videoResult = await prepareVideoForTelegram(videoUrl, shiurId);
-
-    await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
-
-    if (!videoResult) {
-      throw new Error('Video preparation failed');
-    }
-
-    if (videoResult.tooLarge) {
-      const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
-      await bot.sendMessage(
-        chatId,
-        `🎬 *Video Shiur*\n\n` +
-          `The video could not be processed for Telegram.\n\n` +
-          `[Watch on Kol Halashon](${shiurPageUrl})`,
-        { parse_mode: 'Markdown', disable_web_page_preview: true }
-      );
-      return false;
-    }
-
-    if (videoResult.parts) {
-      const { parts, totalDuration } = videoResult;
-      const totalMins = Math.round(totalDuration / 60);
-
-      await bot.sendMessage(
-        chatId,
-        `🎬 *${nachYomi.book} ${nachYomi.chapter}* — Full Video Shiur\n\n` +
-          `_Total duration: ~${totalMins} minutes_\n` +
-          `_Sending in ${parts.length} parts..._`,
-        { parse_mode: 'Markdown' }
-      );
-
-      for (const part of parts) {
-        const partCaption =
-          `🎬 *Part ${part.partNumber}/${part.totalParts}*\n` +
-          `_${nachYomi.book} ${nachYomi.chapter}_ · Rav Yitzchok Breitowitz`;
-
-        await bot.sendVideo(chatId, createReadStream(part.path), {
-          caption: partCaption,
-          parse_mode: 'Markdown',
-          supports_streaming: true,
-          reply_markup:
-            part.partNumber === part.totalParts
-              ? buildMediaKeyboard(nachYomi.book, nachYomi.chapter)
-              : undefined,
-        });
-      }
-
-      await cleanupVideoParts(parts);
-      console.log(`Video sent in ${parts.length} parts`);
-      return true;
-    }
-
-    if (videoResult.path) {
-      await bot.sendVideo(chatId, createReadStream(videoResult.path), {
-        caption: buildMediaCaption(nachYomi, 'video'),
+      `🎬 *Video Shiur*\n` +
+        `_${nachYomi.book} ${nachYomi.chapter}_ · Rav Yitzchok Breitowitz\n\n` +
+        `[Watch Full Video Shiur](${shiurPageUrl})`,
+      {
         parse_mode: 'Markdown',
+        disable_web_page_preview: true,
         reply_markup: buildMediaKeyboard(nachYomi.book, nachYomi.chapter),
-        supports_streaming: true,
-      });
-      await cleanupVideo(videoResult.path);
-      console.log('Video sent');
-      return true;
-    }
+      }
+    );
+    console.log('Video link sent');
+    return true;
   } catch (err) {
-    console.warn('Video failed:', err.message);
-    const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
-    await bot
-      .sendMessage(
-        chatId,
-        `🎬 *Video Shiur*\n\n` +
-          `Video conversion failed. Watch on Kol Halashon instead:\n\n` +
-          `[Watch Full Shiur](${shiurPageUrl})`,
-        { parse_mode: 'Markdown', disable_web_page_preview: true }
-      )
-      .catch(() => {});
+    console.warn('Video link failed:', err.message);
+    return false;
   }
-  return false;
 }
 
 async function sendAudioShiur(chatId, nachYomi, shiurId) {
@@ -231,13 +149,10 @@ async function runBroadcast() {
     console.log('Time check passed: It is 6am Israel time');
   }
 
-  // NO RETRY LOOP: Retrying would cause duplicate messages if video/audio
+  // NO RETRY LOOP: Retrying would cause duplicate messages if audio/video link
   // succeeded but text failed. Each send function handles its own errors.
 
   console.log(`[${new Date().toISOString()}] Starting broadcast to ${CHANNEL_ID}...`);
-
-  const ffmpegAvailable = await checkFfmpeg();
-  console.log(`FFmpeg available: ${ffmpegAvailable}`);
 
   // Get today's Nach Yomi - fail fast if this doesn't work
   const nachYomi = await getTodaysNachYomi();
@@ -245,17 +160,8 @@ async function runBroadcast() {
 
   const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
 
-  // Send video (function handles its own errors, but wrap just in case)
-  console.log('--- Sending video ---');
-  try {
-    const videoResult = await sendVideoShiur(CHANNEL_ID, nachYomi, shiurId, ffmpegAvailable);
-    console.log(`Video result: ${videoResult ? 'sent' : 'skipped/failed'}`);
-  } catch (err) {
-    console.error('Video send failed unexpectedly:', err.message);
-  }
-
-  // Send audio (function handles its own errors, but wrap just in case)
-  console.log('--- Sending audio ---');
+  // Send audio FIRST (primary content - most important)
+  console.log('--- Sending audio (primary) ---');
   if (shiurId) {
     try {
       const audioResult = await sendAudioShiur(CHANNEL_ID, nachYomi, shiurId);
@@ -265,6 +171,15 @@ async function runBroadcast() {
     }
   } else {
     console.log('No shiur ID, skipping audio');
+  }
+
+  // Send video link (function handles its own errors)
+  console.log('--- Sending video link ---');
+  try {
+    const videoResult = await sendVideoLink(CHANNEL_ID, nachYomi, shiurId);
+    console.log(`Video link result: ${videoResult ? 'sent' : 'skipped/failed'}`);
+  } catch (err) {
+    console.error('Video link send failed unexpectedly:', err.message);
   }
 
   // Send text
@@ -286,9 +201,10 @@ async function runBroadcast() {
   // Publish to unified Torah Yomi channel
   if (isUnifiedChannelEnabled()) {
     try {
-      const summaryText = `📖 *${nachYomi.book} ${nachYomi.chapter}*\n` +
+      const summaryText =
+        `📖 *${nachYomi.book} ${nachYomi.chapter}*\n` +
         `_${nachYomi.hebrewBook || ''}_\n\n` +
-        `🎧 Audio & 🎬 Video shiurim by Rav Yitzchok Breitowitz\n` +
+        `🎧 Audio shiur + 🎬 Video link\n` +
         `📚 Full chapter with Hebrew/English text\n\n` +
         `_Use @NachYomiBot for the complete experience_`;
       await publishTextToUnified(summaryText);

@@ -120,10 +120,10 @@ export function buildWelcomeMessage() {
 
 One chapter of Nevi'im and Ketuvim, every day, with Rav Breitowitz.
 
-/start — Today's shiur
-/video — Watch
-/audio — Listen
-/text — Read
+/start — Today's shiur (audio + video link + text)
+/audio — Listen to the audio shiur
+/video — Get video shiur link
+/text — Read the chapter
 
 _New chapter daily at 6 AM Israel time._`;
 }
