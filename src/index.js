@@ -181,7 +181,14 @@ cron.schedule(
       }
 
       // Subscribers (always broadcast to private subscribers)
-      const subscribers = await loadSubscribers();
+      let subscribers = await loadSubscribers();
+
+      // Include ADMIN_CHAT_ID as a subscriber if configured (for testing/admin)
+      if (ADMIN_CHAT_ID && !subscribers.includes(Number(ADMIN_CHAT_ID))) {
+        subscribers = [Number(ADMIN_CHAT_ID), ...subscribers];
+        console.log(`Added admin (${ADMIN_CHAT_ID}) to subscriber list`);
+      }
+
       console.log(`Broadcasting to ${subscribers.length} subscribers...`);
 
       for (const id of subscribers) {

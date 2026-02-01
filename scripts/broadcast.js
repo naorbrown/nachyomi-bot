@@ -157,7 +157,14 @@ async function runBroadcast() {
   }
 
   // 2. Send to all subscribers (always)
-  const subscribers = await loadSubscribers();
+  let subscribers = await loadSubscribers();
+
+  // Include ADMIN_CHAT_ID as a subscriber if configured (for testing/admin)
+  if (ADMIN_CHAT_ID && !subscribers.includes(Number(ADMIN_CHAT_ID))) {
+    subscribers = [Number(ADMIN_CHAT_ID), ...subscribers];
+    console.log(`Added admin (${ADMIN_CHAT_ID}) to subscriber list for broadcast`);
+  }
+
   console.log(`\n--- Subscribers: ${subscribers.length} ---`);
 
   let sent = 0;
