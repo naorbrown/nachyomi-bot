@@ -85,11 +85,34 @@ describe('Broadcast Script', () => {
       expect(content).toMatch(/TELEGRAM_CHANNEL_ID/);
     });
 
+    it('should support TELEGRAM_CHAT_ID as fallback for ADMIN_CHAT_ID', async () => {
+      const broadcastPath = resolve('./scripts/broadcast.js');
+      const content = await readFile(broadcastPath, 'utf-8');
+
+      expect(content).toMatch(/ADMIN_CHAT_ID.*\|\|.*TELEGRAM_CHAT_ID/);
+    });
+
     it('should support FORCE_BROADCAST for manual triggers', async () => {
       const broadcastPath = resolve('./scripts/broadcast.js');
       const content = await readFile(broadcastPath, 'utf-8');
 
       expect(content).toMatch(/FORCE_BROADCAST/);
+    });
+  });
+
+  describe('Diagnostic Checks', () => {
+    it('should warn if ADMIN_CHAT_ID equals CHANNEL_ID', async () => {
+      const broadcastPath = resolve('./scripts/broadcast.js');
+      const content = await readFile(broadcastPath, 'utf-8');
+
+      expect(content).toMatch(/ADMIN_CHAT_ID.*===.*CHANNEL_ID/);
+    });
+
+    it('should warn if ADMIN_CHAT_ID is a group/channel ID', async () => {
+      const broadcastPath = resolve('./scripts/broadcast.js');
+      const content = await readFile(broadcastPath, 'utf-8');
+
+      expect(content).toMatch(/startsWith.*'-'/);
     });
   });
 

@@ -251,7 +251,7 @@ async function runBroadcast() {
     }
   }
 
-  // 4. Summary
+  // 4. Summary (logged only, no message sent to users)
   console.log('\n=== BROADCAST SUMMARY ===');
   console.log(`Nach Yomi: ${nachYomi.book} ${nachYomi.chapter}`);
   if (results.channel.attempted) {
@@ -260,21 +260,6 @@ async function runBroadcast() {
   console.log(
     `Subscribers: ${results.subscribers.success}/${results.subscribers.total} successful, ${results.subscribers.failed} failed`
   );
-
-  // 5. Send admin notification (separate from broadcast content)
-  if (ADMIN_CHAT_ID) {
-    const statusMsg = [
-      `Broadcast: ${nachYomi.book} ${nachYomi.chapter}`,
-      results.channel.attempted ? `Channel: ${results.channel.success ? 'OK' : 'FAIL'}` : null,
-      `Subscribers: ${results.subscribers.success}/${results.subscribers.total}`,
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    await bot.sendMessage(ADMIN_CHAT_ID, statusMsg).catch((err) => {
-      console.error(`Failed to send admin notification: ${err.message}`);
-    });
-  }
 
   console.log('=== BROADCAST COMPLETE ===');
   process.exit(0);
