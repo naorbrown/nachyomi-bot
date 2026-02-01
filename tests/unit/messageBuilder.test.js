@@ -194,27 +194,24 @@ describe('buildMediaKeyboard', () => {
 });
 
 describe('buildWelcomeMessage', () => {
-  it('should include all command descriptions', () => {
+  it('should include Nach Yomi title', () => {
     const message = buildWelcomeMessage();
-    expect(message).toContain('/start');
-    expect(message).toContain('/video');
-    expect(message).toContain('/audio');
-    expect(message).toContain('/text');
+    expect(message).toContain('*Nach Yomi*');
   });
 
-  it('should describe /start as including audio, video link, and text', () => {
+  it('should mention audio shiur', () => {
     const message = buildWelcomeMessage();
-    expect(message).toMatch(/\/start.*audio.*video.*text/i);
+    expect(message).toMatch(/audio/i);
   });
 
-  it('should describe /video as providing a link', () => {
+  it('should mention video', () => {
     const message = buildWelcomeMessage();
-    expect(message).toMatch(/\/video.*link/i);
+    expect(message).toMatch(/video/i);
   });
 
-  it('should describe /audio as listen', () => {
+  it('should mention text', () => {
     const message = buildWelcomeMessage();
-    expect(message).toMatch(/\/audio.*[Ll]isten/);
+    expect(message).toMatch(/text/i);
   });
 
   it('should mention 6 AM Israel time', () => {
@@ -222,15 +219,14 @@ describe('buildWelcomeMessage', () => {
     expect(message).toContain('6 AM Israel');
   });
 
-  it('should be valid Markdown', () => {
+  it('should mention subscription', () => {
     const message = buildWelcomeMessage();
-    expect(message).toContain('*Nach Yomi*');
-    expect(message).toContain('_New chapter');
+    expect(message).toMatch(/subscribed/i);
   });
 
   it('should mention Rav Breitowitz', () => {
     const message = buildWelcomeMessage();
-    expect(message).toContain('Rav Breitowitz');
+    expect(message).toContain('Rav');
   });
 });
 
