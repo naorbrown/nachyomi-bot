@@ -158,57 +158,57 @@ bot.on('message', async msg => {
   }
 });
 
-// Daily broadcast at 6am Israel
-if (CHANNEL_ID) {
-  cron.schedule(
-    '0 6 * * *',
-    async () => {
-      console.log('Running daily broadcast...');
+// Daily broadcast at 6am Israel (always schedule, even without channel)
+cron.schedule(
+  '0 6 * * *',
+  async () => {
+    console.log('Running daily broadcast...');
 
+    try {
+      const nachYomi = await getTodaysNachYomi();
+      const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
+      let chapterText = null;
       try {
-        const nachYomi = await getTodaysNachYomi();
-        const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-        let chapterText = null;
-        try {
-          chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null });
-        } catch {
-          // Text fetch failed, continue without it
-        }
+        chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null });
+      } catch {
+        // Text fetch failed, continue without it
+      }
 
-        // Channel
+      // Channel (only if configured)
+      if (CHANNEL_ID) {
         await sendDailyContent(CHANNEL_ID, nachYomi, shiurId, chapterText);
         console.log('Channel broadcast done');
+      }
 
-        // Subscribers
-        const subscribers = await loadSubscribers();
-        console.log(`Broadcasting to ${subscribers.length} subscribers...`);
+      // Subscribers (always broadcast to private subscribers)
+      const subscribers = await loadSubscribers();
+      console.log(`Broadcasting to ${subscribers.length} subscribers...`);
 
-        for (const id of subscribers) {
-          try {
-            await sendDailyContent(id, nachYomi, shiurId, chapterText);
-            await new Promise(r => setTimeout(r, 100));
-          } catch (err) {
-            console.warn(`Failed for ${id}:`, err.message);
-          }
-        }
-
-        console.log('Broadcast complete');
-        if (ADMIN_CHAT_ID) {
-          bot
-            .sendMessage(ADMIN_CHAT_ID, `✅ Broadcast: ${nachYomi.book} ${nachYomi.chapter}`)
-            .catch(() => {});
-        }
-      } catch (err) {
-        console.error('Broadcast failed:', err.message);
-        if (ADMIN_CHAT_ID) {
-          bot.sendMessage(ADMIN_CHAT_ID, `❌ Broadcast failed: ${err.message}`).catch(() => {});
+      for (const id of subscribers) {
+        try {
+          await sendDailyContent(id, nachYomi, shiurId, chapterText);
+          await new Promise(r => setTimeout(r, 100));
+        } catch (err) {
+          console.warn(`Failed for ${id}:`, err.message);
         }
       }
-    },
-    { timezone: 'Asia/Jerusalem' }
-  );
-  console.log('Daily broadcast scheduled at 6am Israel');
-}
+
+      console.log('Broadcast complete');
+      if (ADMIN_CHAT_ID) {
+        bot
+          .sendMessage(ADMIN_CHAT_ID, `✅ Broadcast: ${nachYomi.book} ${nachYomi.chapter}`)
+          .catch(() => {});
+      }
+    } catch (err) {
+      console.error('Broadcast failed:', err.message);
+      if (ADMIN_CHAT_ID) {
+        bot.sendMessage(ADMIN_CHAT_ID, `❌ Broadcast failed: ${err.message}`).catch(() => {});
+      }
+    }
+  },
+  { timezone: 'Asia/Jerusalem' }
+);
+console.log('Daily broadcast scheduled at 6am Israel');
 
 bot.on('polling_error', err => console.error('Polling error:', err.message));
 bot.on('error', err => console.error('Bot error:', err.message));
