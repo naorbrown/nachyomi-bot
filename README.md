@@ -15,16 +15,12 @@
 
 ---
 
-## Quick Start (Users)
-
-**Just want to learn Nach Yomi?** No setup required!
+## Quick Start
 
 1. Open Telegram
 2. Search for **@NachYomi_Bot** or [click here](https://t.me/NachYomi_Bot)
-3. Press **Start** or send `/start`
-4. Receive today's chapter with video, audio, and text
-
-**Want daily posts in your channel?** Subscribe to [@TorahYomiChannelBot](https://t.me/TorahYomiChannelBot) for automatic 6 AM Israel time broadcasts.
+3. Press **Start**
+4. You're subscribed! Receive daily shiurim at 6 AM Israel time
 
 ---
 
@@ -84,15 +80,15 @@ npm start
 
 This bot sends audio embedded directly and video as links — no video conversion needed. The bot works without FFmpeg.
 
-## Commands
+## How It Works
 
-| Command | Description |
-|---------|-------------|
-| `/start` | Today's shiur (audio + video link + text) |
-| `/today` | Same as /start |
-| `/audio` | Listen to the audio shiur (embedded) |
-| `/video` | Get video shiur link |
-| `/text` | Read the chapter |
+Send `/start` to the bot. You'll receive:
+
+1. **Audio shiur** — Embedded MP3 by Rav Breitowitz
+2. **Video link** — Watch on Kol Halashon
+3. **Full text** — Hebrew + English from Sefaria
+
+You're automatically subscribed for daily broadcasts at 6 AM Israel time.
 
 ## Configuration
 
@@ -156,28 +152,25 @@ cp .env.example .env
 ```
 nachyomi-bot/
 ├── src/
-│   ├── index.js              # Bot entry, commands, cron scheduler
-│   ├── hebcalService.js      # Nach Yomi calendar API integration
-│   ├── sefariaService.js     # Hebrew/English text fetching
-│   ├── messageBuilder.js     # Telegram message formatting
-│   ├── videoService.js       # Video utilities (legacy, not used in main flow)
+│   ├── index.js              # Bot entry, commands, scheduler
+│   ├── hebcalService.js      # Nach Yomi calendar API
+│   ├── sefariaService.js     # Hebrew/English text
+│   ├── messageBuilder.js     # Message formatting
 │   ├── utils/
-│   │   ├── commandParser.js  # Telegram command parsing
-│   │   └── rateLimiter.js    # Request rate limiting
+│   │   ├── subscribers.js    # Subscriber management
+│   │   ├── commandParser.js  # Command parsing
+│   │   ├── israelTime.js     # Israel timezone utilities
+│   │   └── rateLimiter.js    # Rate limiting
 │   └── data/
-│       └── shiurMapping.js   # 929 shiur ID mappings (100% Nach coverage)
+│       └── shiurMapping.js   # 929 shiur ID mappings
 ├── scripts/
-│   ├── broadcast.js          # Standalone daily broadcast (GitHub Actions)
-│   └── poll-commands.js      # Command polling script (GitHub Actions)
-├── tests/
-│   ├── unit/                 # Unit tests (vitest)
-│   └── fixtures/             # Mock API responses
+│   ├── broadcast.js          # Daily broadcast (GitHub Actions)
+│   └── poll-commands.js      # Command polling (GitHub Actions)
 ├── .github/
 │   ├── workflows/            # CI/CD and bot automation
-│   └── state/                # Bot state persistence
-├── Dockerfile                # Production build
-├── docker-compose.yml        # Container orchestration
-└── .env.example              # Environment template
+│   └── state/                # Subscribers + update tracking
+├── Dockerfile
+└── .env.example
 ```
 
 ### Tech Stack

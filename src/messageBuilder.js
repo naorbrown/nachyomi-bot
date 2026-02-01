@@ -118,14 +118,13 @@ export function buildMediaKeyboard(book, chapter) {
 export function buildWelcomeMessage() {
   return `📖 *Nach Yomi*
 
-One chapter of Nevi'im and Ketuvim, every day, with Rav Breitowitz.
+One chapter of Nevi'im and Ketuvim, every day.
 
-/start — Today's shiur (audio + video link + text)
-/audio — Listen to the audio shiur
-/video — Get video shiur link
-/text — Read the chapter
+🎧 Audio shiur by Rav Yitzchok Breitowitz
+🎬 Video link to full shiur
+📖 Hebrew + English text
 
-_New chapter daily at 6 AM Israel time._`;
+_You're subscribed! New chapter daily at 6 AM Israel time._`;
 }
 
 /**
