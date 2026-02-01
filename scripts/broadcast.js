@@ -4,14 +4,15 @@
  *
  * Sends today's Nach Yomi to:
  * 1. The Telegram channel (TELEGRAM_CHANNEL_ID) - optional
- * 2. All private bot subscribers
- * 3. Admin chat (ADMIN_CHAT_ID / TELEGRAM_CHAT_ID) - always included
+ * 2. Torah Yomi unified channel (TORAH_YOMI_CHANNEL_ID) - optional
+ * 3. All private bot subscribers
+ * 4. Admin chat (TELEGRAM_CHAT_ID) - always included
  *
- * Content: Audio (embedded) + Video Link + Text
+ * Content: Audio (embedded) + Video Link + Full Text
  *
  * Usage: node scripts/broadcast.js
  * Requires: TELEGRAM_BOT_TOKEN
- * Optional: TELEGRAM_CHANNEL_ID, ADMIN_CHAT_ID/TELEGRAM_CHAT_ID
+ * Optional: TELEGRAM_CHANNEL_ID, TELEGRAM_CHAT_ID, TORAH_YOMI_*
  */
 
 import 'dotenv/config';
@@ -33,12 +34,16 @@ const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
 const FORCE_BROADCAST = process.env.FORCE_BROADCAST === 'true';
 
+// Torah Yomi unified channel (uses separate bot)
+const TORAH_YOMI_CHANNEL_ID = process.env.TORAH_YOMI_CHANNEL_ID;
+const TORAH_YOMI_BOT_TOKEN = process.env.TORAH_YOMI_CHANNEL_BOT_TOKEN;
+const TORAH_YOMI_ENABLED = process.env.TORAH_YOMI_PUBLISH_ENABLED !== 'false';
+
 console.log('=== BROADCAST CONFIGURATION ===');
 console.log(`BOT_TOKEN: ${BOT_TOKEN ? '***' + BOT_TOKEN.slice(-4) : 'NOT SET'}`);
 console.log(`CHANNEL_ID: ${CHANNEL_ID || 'NOT SET'}`);
-console.log(`ADMIN_CHAT_ID (raw): ${process.env.ADMIN_CHAT_ID || 'NOT SET'}`);
-console.log(`TELEGRAM_CHAT_ID (raw): ${process.env.TELEGRAM_CHAT_ID || 'NOT SET'}`);
-console.log(`ADMIN_CHAT_ID (resolved): ${ADMIN_CHAT_ID || 'NOT SET'}`);
+console.log(`TELEGRAM_CHAT_ID: ${ADMIN_CHAT_ID || 'NOT SET'}`);
+console.log(`TORAH_YOMI_CHANNEL: ${TORAH_YOMI_ENABLED && TORAH_YOMI_CHANNEL_ID ? 'ENABLED' : 'DISABLED'}`);
 console.log(`FORCE_BROADCAST: ${FORCE_BROADCAST}`);
 
 // Diagnostic checks
@@ -62,11 +67,17 @@ if (!ADMIN_CHAT_ID && !CHANNEL_ID) {
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
+// Torah Yomi bot (separate instance with different token)
+const torahYomiBot =
+  TORAH_YOMI_ENABLED && TORAH_YOMI_BOT_TOKEN
+    ? new TelegramBot(TORAH_YOMI_BOT_TOKEN, { polling: false })
+    : null;
+
 /**
  * Send audio shiur (embedded)
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function sendAudio(chatId, nachYomi, shiurId) {
+async function sendAudio(chatId, nachYomi, shiurId, botInstance = bot) {
   if (!shiurId) {
     return { success: false, error: 'No shiur ID' };
   }
@@ -74,7 +85,7 @@ async function sendAudio(chatId, nachYomi, shiurId) {
   try {
     const audioUrl = getShiurAudioUrl(shiurId);
     console.log(`  Sending audio to ${chatId}...`);
-    await bot.sendAudio(chatId, audioUrl, {
+    await botInstance.sendAudio(chatId, audioUrl, {
       title: `${nachYomi.book} ${nachYomi.chapter}`,
       performer: 'Rav Yitzchok Breitowitz',
       caption: buildMediaCaption(nachYomi, 'audio'),
@@ -93,12 +104,12 @@ async function sendAudio(chatId, nachYomi, shiurId) {
  * Send video link
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function sendVideoLink(chatId, nachYomi) {
+async function sendVideoLink(chatId, nachYomi, botInstance = bot) {
   const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
 
   try {
     console.log(`  Sending video link to ${chatId}...`);
-    await bot.sendMessage(chatId, `[Watch Video Shiur](${shiurPageUrl})`, {
+    await botInstance.sendMessage(chatId, `[Watch Video Shiur](${shiurPageUrl})`, {
       parse_mode: 'Markdown',
       disable_web_page_preview: true,
     });
@@ -114,14 +125,14 @@ async function sendVideoLink(chatId, nachYomi) {
  * Send chapter text
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function sendText(chatId, nachYomi, chapterText) {
+async function sendText(chatId, nachYomi, chapterText, botInstance = bot) {
   try {
     const messages = buildDailyMessages(nachYomi, chapterText);
     console.log(`  Sending ${messages.length} text message(s) to ${chatId}...`);
 
     for (let i = 0; i < messages.length; i++) {
       const isLast = i === messages.length - 1;
-      await bot.sendMessage(chatId, messages[i], {
+      await botInstance.sendMessage(chatId, messages[i], {
         parse_mode: 'Markdown',
         reply_markup: isLast ? buildKeyboard(nachYomi.book, nachYomi.chapter) : undefined,
         disable_web_page_preview: true,
@@ -140,12 +151,12 @@ async function sendText(chatId, nachYomi, chapterText) {
  * NO RETRY: Prevents duplicates if partial failure occurs
  * @returns {Promise<{audio: boolean, video: boolean, text: boolean, anySuccess: boolean}>}
  */
-async function sendDailyContent(chatId, nachYomi, shiurId, chapterText) {
+async function sendDailyContent(chatId, nachYomi, shiurId, chapterText, botInstance = bot) {
   console.log(`\nSending to chat ${chatId}:`);
 
-  const audioResult = await sendAudio(chatId, nachYomi, shiurId);
-  const videoResult = await sendVideoLink(chatId, nachYomi);
-  const textResult = await sendText(chatId, nachYomi, chapterText);
+  const audioResult = await sendAudio(chatId, nachYomi, shiurId, botInstance);
+  const videoResult = await sendVideoLink(chatId, nachYomi, botInstance);
+  const textResult = await sendText(chatId, nachYomi, chapterText, botInstance);
 
   const anySuccess = audioResult.success || videoResult.success || textResult.success;
 
@@ -193,10 +204,11 @@ async function runBroadcast() {
 
   const results = {
     channel: { attempted: false, success: false },
+    torahYomi: { attempted: false, success: false },
     subscribers: { total: 0, success: 0, failed: 0 },
   };
 
-  // 1. Send to channel (if configured)
+  // 1. Send to main channel (if configured)
   if (CHANNEL_ID) {
     console.log(`\n=== CHANNEL BROADCAST: ${CHANNEL_ID} ===`);
     results.channel.attempted = true;
@@ -210,7 +222,27 @@ async function runBroadcast() {
     console.log('\n=== CHANNEL: Not configured, skipping ===');
   }
 
-  // 2. Build subscriber list
+  // 2. Send to Torah Yomi unified channel (if configured)
+  if (torahYomiBot && TORAH_YOMI_CHANNEL_ID) {
+    console.log(`\n=== TORAH YOMI CHANNEL: ${TORAH_YOMI_CHANNEL_ID} ===`);
+    results.torahYomi.attempted = true;
+    try {
+      const torahYomiResult = await sendDailyContent(
+        TORAH_YOMI_CHANNEL_ID,
+        nachYomi,
+        shiurId,
+        chapterText,
+        torahYomiBot
+      );
+      results.torahYomi.success = torahYomiResult.anySuccess;
+    } catch (err) {
+      console.error(`Torah Yomi channel broadcast failed: ${err.message}`);
+    }
+  } else {
+    console.log('\n=== TORAH YOMI CHANNEL: Not configured, skipping ===');
+  }
+
+  // 3. Build subscriber list
   console.log('\n=== SUBSCRIBER BROADCAST ===');
   let subscribers = await loadSubscribers();
   console.log(`Loaded ${subscribers.length} subscribers from file`);
@@ -233,7 +265,7 @@ async function runBroadcast() {
     console.log('WARNING: No subscribers to broadcast to!');
   }
 
-  // 3. Send to each subscriber
+  // 4. Send to each subscriber
   for (const chatId of subscribers) {
     try {
       const result = await sendDailyContent(chatId, nachYomi, shiurId, chapterText);
@@ -251,11 +283,14 @@ async function runBroadcast() {
     }
   }
 
-  // 4. Summary (logged only, no message sent to users)
+  // 5. Summary (logged only, no message sent to users)
   console.log('\n=== BROADCAST SUMMARY ===');
   console.log(`Nach Yomi: ${nachYomi.book} ${nachYomi.chapter}`);
   if (results.channel.attempted) {
     console.log(`Channel: ${results.channel.success ? 'SUCCESS' : 'FAILED'}`);
+  }
+  if (results.torahYomi.attempted) {
+    console.log(`Torah Yomi: ${results.torahYomi.success ? 'SUCCESS' : 'FAILED'}`);
   }
   console.log(
     `Subscribers: ${results.subscribers.success}/${results.subscribers.total} successful, ${results.subscribers.failed} failed`
