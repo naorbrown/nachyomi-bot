@@ -10,7 +10,7 @@ describe('Broadcast Script', () => {
 
       // Should NOT contain retry loop patterns that cause duplicates
       // The retry loop wraps all send operations, so if text fails after
-      // video/audio succeed, the retry resends everything causing duplicates
+      // audio/video link succeed, the retry resends everything causing duplicates
       expect(content).not.toMatch(/for\s*\(\s*let\s+attempt/);
       expect(content).not.toMatch(/MAX_RETRIES\s*=/);
       expect(content).not.toMatch(/RETRY_DELAYS\s*=/);
@@ -26,12 +26,12 @@ describe('Broadcast Script', () => {
   });
 
   describe('Individual Error Handling', () => {
-    it('should have try-catch in sendVideoShiur for graceful fallback', async () => {
+    it('should have try-catch in sendVideoLink for graceful fallback', async () => {
       const broadcastPath = resolve('./scripts/broadcast.js');
       const content = await readFile(broadcastPath, 'utf-8');
 
-      // Extract sendVideoShiur function
-      const videoFnMatch = content.match(/async function sendVideoShiur[\s\S]*?^}/m);
+      // Extract sendVideoLink function
+      const videoFnMatch = content.match(/async function sendVideoLink[\s\S]*?^}/m);
       expect(videoFnMatch).toBeTruthy();
 
       const videoFn = videoFnMatch[0];
@@ -52,6 +52,34 @@ describe('Broadcast Script', () => {
       expect(audioFn).toMatch(/try\s*\{/);
       expect(audioFn).toMatch(/catch\s*\(/);
       expect(audioFn).toMatch(/Audio.*failed|failed.*audio/i);
+    });
+  });
+
+  describe('Content Order', () => {
+    it('should send audio first as primary content', async () => {
+      const broadcastPath = resolve('./scripts/broadcast.js');
+      const content = await readFile(broadcastPath, 'utf-8');
+
+      // Audio should be sent before video link
+      const audioIndex = content.indexOf('Sending audio (primary)');
+      const videoIndex = content.indexOf('Sending video link');
+
+      expect(audioIndex).toBeGreaterThan(-1);
+      expect(videoIndex).toBeGreaterThan(-1);
+      expect(audioIndex).toBeLessThan(videoIndex);
+    });
+
+    it('should send video as link, not embedded', async () => {
+      const broadcastPath = resolve('./scripts/broadcast.js');
+      const content = await readFile(broadcastPath, 'utf-8');
+
+      // Should use sendVideoLink, not sendVideoShiur
+      expect(content).toMatch(/sendVideoLink/);
+      expect(content).not.toMatch(/sendVideoShiur/);
+
+      // Should not import video service
+      expect(content).not.toMatch(/videoService/);
+      expect(content).not.toMatch(/prepareVideoForTelegram/);
     });
   });
 

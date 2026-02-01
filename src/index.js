@@ -2,20 +2,19 @@
  * Nach Yomi Telegram Bot
  *
  * Daily Nach Yomi chapter with Rav Breitowitz's shiurim from Kol Halashon.
- * Features: Embedded video + audio, full Hebrew + English text
+ * Features: Embedded audio shiur, video link, full Hebrew + English text
  *
  * Commands:
- *   /today - Get today's Nach Yomi (video + audio + text)
- *   /start - Same as /today
- *   /video - Watch the video shiur
- *   /audio - Listen to the audio shiur
+ *   /start - Get today's Nach Yomi (audio + video link + text)
+ *   /today - Same as /start
+ *   /audio - Listen to the audio shiur (embedded)
+ *   /video - Get link to watch the video shiur
  *   /text  - Read the chapter
  */
 
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
 import cron from 'node-cron';
-import { createReadStream } from 'fs';
 import { getTodaysNachYomi } from './hebcalService.js';
 import { getChapterText } from './sefariaService.js';
 import {
@@ -25,18 +24,7 @@ import {
   buildMediaKeyboard,
   buildWelcomeMessage,
 } from './messageBuilder.js';
-import {
-  getShiurId,
-  getShiurAudioUrl,
-  getShiurVideoUrl,
-  getShiurUrl,
-} from './data/shiurMapping.js';
-import {
-  prepareVideoForTelegram,
-  cleanupVideo,
-  cleanupVideoParts,
-  checkFfmpeg,
-} from './videoService.js';
+import { getShiurId, getShiurAudioUrl, getShiurUrl } from './data/shiurMapping.js';
 import { isUnifiedChannelEnabled, publishTextToUnified } from './unified/index.js';
 
 // Configuration
@@ -50,7 +38,6 @@ if (!BOT_TOKEN) {
 }
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
-let ffmpegAvailable = false;
 
 // Rate limiting: 5 requests per minute per user
 const rateLimits = new Map();
@@ -83,134 +70,50 @@ function isRateLimited(chatId) {
 
 // Initialize
 (async () => {
-  ffmpegAvailable = await checkFfmpeg();
-
   // Set bot commands programmatically
   await bot.setMyCommands([
-    { command: 'today', description: "Get today's Nach Yomi" },
-    { command: 'start', description: "Get today's shiur" },
-    { command: 'video', description: 'Watch the video shiur' },
+    { command: 'start', description: "Today's shiur (audio + video link + text)" },
+    { command: 'today', description: "Today's Nach Yomi" },
     { command: 'audio', description: 'Listen to the audio shiur' },
+    { command: 'video', description: 'Get video shiur link' },
     { command: 'text', description: 'Read the chapter' },
   ]);
 
   console.log('Nach Yomi Bot started');
-  console.log(`FFmpeg: ${ffmpegAvailable ? 'yes' : 'no'}`);
   console.log('Commands registered');
 })();
 
 /**
- * Send video shiur for a chapter
- * Handles both single videos and multi-part videos for large shiurim
+ * Send video shiur link for a chapter
+ * Sends a link to watch the video on Kol Halashon
  */
-async function sendVideoShiur(chatId, nachYomi, shiurId) {
-  if (!ffmpegAvailable) {
-    await bot.sendMessage(chatId, '_Video requires FFmpeg. Use /audio instead._', {
-      parse_mode: 'Markdown',
-    });
-    return false;
-  }
+async function sendVideoLink(chatId, nachYomi, shiurId) {
+  const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
 
   if (!shiurId) {
     await bot.sendMessage(
       chatId,
-      '_No video mapped for this chapter yet. Use /audio for the full shiur._',
-      { parse_mode: 'Markdown' }
+      `🎬 *Video Shiur*\n\n` +
+        `_${nachYomi.book} ${nachYomi.chapter}_\n\n` +
+        `[Watch on Kol Halashon](${shiurPageUrl})`,
+      { parse_mode: 'Markdown', disable_web_page_preview: true }
     );
-    return false;
+    return true;
   }
 
-  try {
-    const statusMsg = await bot.sendMessage(
-      chatId,
-      '🎬 _Converting full video shiur (this may take several minutes)..._',
-      { parse_mode: 'Markdown' }
-    );
-
-    const videoUrl = getShiurVideoUrl(shiurId);
-    const videoResult = await prepareVideoForTelegram(videoUrl, shiurId);
-
-    // Delete status message
-    await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
-
-    if (!videoResult) {
-      throw new Error('Video preparation failed');
+  await bot.sendMessage(
+    chatId,
+    `🎬 *Video Shiur*\n` +
+      `_${nachYomi.book} ${nachYomi.chapter}_ · Rav Yitzchok Breitowitz\n\n` +
+      `[Watch Full Video Shiur](${shiurPageUrl})`,
+    {
+      parse_mode: 'Markdown',
+      disable_web_page_preview: true,
+      reply_markup: buildMediaKeyboard(nachYomi.book, nachYomi.chapter),
     }
-
-    if (videoResult.tooLarge) {
-      // Splitting failed - provide external link
-      const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
-      await bot.sendMessage(
-        chatId,
-        `🎬 *Video Shiur*\n\n` +
-          `The video could not be processed for Telegram.\n\n` +
-          `[Watch on Kol Halashon](${shiurPageUrl})`,
-        { parse_mode: 'Markdown', disable_web_page_preview: true }
-      );
-      return false;
-    }
-
-    // Handle multi-part videos
-    if (videoResult.parts) {
-      const { parts, totalDuration } = videoResult;
-      const totalMins = Math.round(totalDuration / 60);
-
-      await bot.sendMessage(
-        chatId,
-        `🎬 *${nachYomi.book} ${nachYomi.chapter}* — Full Video Shiur\n\n` +
-          `_Total duration: ~${totalMins} minutes_\n` +
-          `_Sending in ${parts.length} parts..._`,
-        { parse_mode: 'Markdown' }
-      );
-
-      for (const part of parts) {
-        const partCaption =
-          `🎬 *Part ${part.partNumber}/${part.totalParts}*\n` +
-          `_${nachYomi.book} ${nachYomi.chapter}_ · Rav Yitzchok Breitowitz`;
-
-        await bot.sendVideo(chatId, createReadStream(part.path), {
-          caption: partCaption,
-          parse_mode: 'Markdown',
-          supports_streaming: true,
-          reply_markup:
-            part.partNumber === part.totalParts
-              ? buildMediaKeyboard(nachYomi.book, nachYomi.chapter)
-              : undefined,
-        });
-      }
-
-      await cleanupVideoParts(parts);
-      console.log(`Video sent in ${parts.length} parts: ${nachYomi.book} ${nachYomi.chapter}`);
-      return true;
-    }
-
-    // Single video (under 50MB)
-    if (videoResult.path) {
-      await bot.sendVideo(chatId, createReadStream(videoResult.path), {
-        caption: buildMediaCaption(nachYomi, 'video'),
-        parse_mode: 'Markdown',
-        reply_markup: buildMediaKeyboard(nachYomi.book, nachYomi.chapter),
-        supports_streaming: true,
-      });
-      await cleanupVideo(videoResult.path);
-      console.log(`Video sent: ${nachYomi.book} ${nachYomi.chapter}`);
-      return true;
-    }
-  } catch (err) {
-    console.warn('Video failed:', err.message);
-    // Notify user of failure with fallback link
-    const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
-    await bot
-      .sendMessage(
-        chatId,
-        `🎬 *Video Shiur*\n\n` +
-          `Video conversion failed. Watch on Kol Halashon instead:\n\n` +
-          `[Watch Full Shiur](${shiurPageUrl})`,
-        { parse_mode: 'Markdown', disable_web_page_preview: true }
-      )
-      .catch(() => {});
-  }
-  return false;
+  );
+  console.log(`Video link sent: ${nachYomi.book} ${nachYomi.chapter}`);
+  return true;
 }
 
 /**
@@ -278,7 +181,8 @@ async function sendChapterText(chatId, nachYomi, chapterText) {
 }
 
 /**
- * Send daily Nach Yomi - VIDEO + AUDIO + TEXT (complete experience)
+ * Send daily Nach Yomi - AUDIO (primary) + VIDEO LINK + TEXT
+ * Audio is the most prominent content, sent first
  */
 async function sendDailyNachYomi(chatId, options = {}) {
   const { videoOnly = false, audioOnly = false, textOnly = false } = options;
@@ -289,14 +193,14 @@ async function sendDailyNachYomi(chatId, options = {}) {
 
     const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
 
-    // 1. VIDEO (full shiur)
-    if (!audioOnly && !textOnly) {
-      await sendVideoShiur(chatId, nachYomi, shiurId);
-    }
-
-    // 2. AUDIO (full shiur) - Always send if we have it
+    // 1. AUDIO (primary content - embedded, most important)
     if (!videoOnly && !textOnly && shiurId) {
       await sendAudioShiur(chatId, nachYomi, shiurId);
+    }
+
+    // 2. VIDEO LINK (link to Kol Halashon)
+    if (!audioOnly && !textOnly) {
+      await sendVideoLink(chatId, nachYomi, shiurId);
     }
 
     // 3. TEXT (full chapter)
@@ -385,7 +289,7 @@ bot.on('message', async msg => {
       case 'video': {
         const nachYomi = await getTodaysNachYomi();
         const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-        await sendVideoShiur(chatId, nachYomi, shiurId);
+        await sendVideoLink(chatId, nachYomi, shiurId);
         break;
       }
 
@@ -479,7 +383,7 @@ async function sendToUnifiedChannel() {
       }
     }
 
-    summaryText += `🎧 Audio & 🎬 Video shiurim available\n`;
+    summaryText += `🎧 Audio shiur + 🎬 Video link\n`;
     summaryText += `📚 Full chapter with Hebrew/English text\n\n`;
     summaryText += `_Rav Yitzchok Breitowitz_`;
 

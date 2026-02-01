@@ -30,12 +30,12 @@
 
 ## What is Nach Yomi?
 
-Nach Yomi is the daily study of Nevi'im (Prophets) and Ketuvim (Writings) — one chapter per day, completing all 929 chapters in about 2.5 years. This bot delivers each day's chapter with **full video and audio shiurim** by Harav Yitzchok Breitowitz שליט״א embedded directly in Telegram.
+Nach Yomi is the daily study of Nevi'im (Prophets) and Ketuvim (Writings) — one chapter per day, completing all 929 chapters in about 2.5 years. This bot delivers each day's chapter with **audio shiurim** by Harav Yitzchok Breitowitz שליט״א embedded directly in Telegram, plus links to watch the full video.
 
 ### Why Use This Bot?
 
-- **Watch** — Full video shiurim embedded in Telegram (auto-split if over 50MB)
-- **Listen** — Complete audio shiurim without leaving the app
+- **Listen** — Complete audio shiurim embedded directly in Telegram (primary content)
+- **Watch** — Links to full video shiurim on Kol Halashon
 - **Read** — Full Hebrew text with English translation (Sefaria)
 - **Daily** — Follows the official Nach Yomi calendar, posts at 6 AM Israel time
 - **929 chapters** — 100% shiur coverage for all of Nach
@@ -80,30 +80,18 @@ export TELEGRAM_BOT_TOKEN="your-token"
 npm start
 ```
 
-### FFmpeg Requirement
+### No FFmpeg Required
 
-Video embedding requires FFmpeg for HLS-to-MP4 conversion:
-
-```bash
-# macOS
-brew install ffmpeg
-
-# Ubuntu/Debian
-sudo apt install ffmpeg
-
-# Alpine (Docker)
-apk add ffmpeg
-```
-
-The Docker image includes FFmpeg automatically.
+This bot sends audio embedded directly and video as links — no video conversion needed. The bot works without FFmpeg.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `/start` | Get today's shiur (video + audio + text) |
-| `/video` | Watch the video shiur |
-| `/audio` | Listen to the audio shiur |
+| `/start` | Today's shiur (audio + video link + text) |
+| `/today` | Same as /start |
+| `/audio` | Listen to the audio shiur (embedded) |
+| `/video` | Get video shiur link |
 | `/text` | Read the chapter |
 
 ## Configuration
@@ -172,7 +160,7 @@ nachyomi-bot/
 │   ├── hebcalService.js      # Nach Yomi calendar API integration
 │   ├── sefariaService.js     # Hebrew/English text fetching
 │   ├── messageBuilder.js     # Telegram message formatting
-│   ├── videoService.js       # HLS→MP4 conversion & splitting
+│   ├── videoService.js       # Video utilities (legacy, not used in main flow)
 │   ├── utils/
 │   │   ├── commandParser.js  # Telegram command parsing
 │   │   └── rateLimiter.js    # Request rate limiting
@@ -187,7 +175,7 @@ nachyomi-bot/
 ├── .github/
 │   ├── workflows/            # CI/CD and bot automation
 │   └── state/                # Bot state persistence
-├── Dockerfile                # Multi-stage production build
+├── Dockerfile                # Production build
 ├── docker-compose.yml        # Container orchestration
 └── .env.example              # Environment template
 ```
@@ -199,7 +187,6 @@ nachyomi-bot/
 | Runtime | Node.js 18+ | ES modules, async/await |
 | Bot Framework | node-telegram-bot-api | Telegram integration |
 | Scheduler | GitHub Actions | Daily 6 AM posts, command polling |
-| Video Processing | FFmpeg | HLS stream conversion |
 | Containerization | Docker | Alternative deployment |
 | CI/CD | GitHub Actions | Automated builds and bot operation |
 | Testing | Vitest | Unit tests with coverage |
@@ -209,27 +196,30 @@ nachyomi-bot/
 
 1. **Schedule Fetch**: Hebcal API → Today's book/chapter
 2. **Content Assembly**:
-   - Video: Kol Halashon HLS → FFmpeg → MP4 (split if >50MB)
-   - Audio: Direct MP3 URL from Kol Halashon
+   - Audio: Direct MP3 URL from Kol Halashon (embedded in Telegram)
+   - Video: Link to Kol Halashon video page
    - Text: Sefaria API → Hebrew + English verses
-3. **Delivery**: Telegram Bot API → User/Channel
+3. **Delivery**: Telegram Bot API → User/Channel (audio first, then video link, then text)
 
-## How Video Embedding Works
+## How Content Delivery Works
 
 ```
-┌─────────────────┐    ┌─────────────┐    ┌──────────────┐    ┌──────────────┐
-│  Kol Halashon   │───►│   FFmpeg    │───►│  Size Check  │───►│   Telegram   │
-│  HLS Stream     │    │  Remuxing   │    │  & Splitter  │    │   Embedded   │
-└─────────────────┘    └─────────────┘    └──────────────┘    └──────────────┘
+┌─────────────────┐    ┌─────────────────┐    ┌──────────────┐
+│   Kol Halashon  │───►│   Telegram Bot  │───►│     User     │
+│   Audio/Video   │    │   (sends link)  │    │   Channel    │
+└─────────────────┘    └─────────────────┘    └──────────────┘
 ```
 
-1. Fetches full HLS playlist from `media2.kolhalashon.com`
-2. Converts to MP4 with FFmpeg (stream copy, no quality loss)
-3. Checks file size against Telegram's 50MB limit
-4. **Under 50MB**: Sends as single embedded video
-5. **Over 50MB**: Automatically splits into ~45MB parts and sends sequentially
-6. Each part labeled "Part 1/3", "Part 2/3", etc. with total duration shown
-7. Full audio always included as backup
+**Audio-First Approach:**
+1. **Audio (Primary)**: Embedded MP3 shiur plays directly in Telegram
+2. **Video (Link)**: Direct link to watch on Kol Halashon
+3. **Text**: Full Hebrew + English chapter from Sefaria
+
+This approach provides:
+- Fast delivery (no video processing)
+- Reliable playback (audio embedded, video on source)
+- No duplicate content
+- Works without FFmpeg
 
 ## Deployment
 
@@ -279,7 +269,7 @@ pm2 startup
 
 ## Shiur Coverage
 
-Video/audio embedding is available for **all books** with complete shiur ID mappings:
+Audio shiurim (embedded) and video links are available for **all books** with complete shiur ID mappings:
 
 ### Nevi'im Rishonim (Former Prophets)
 | Book | Chapters | Coverage |
@@ -331,7 +321,7 @@ Video/audio embedding is available for **all books** with complete shiur ID mapp
 | I Chronicles | 1-29 | ✅ 100% |
 | II Chronicles | 1-36 | ✅ 100% |
 
-**Total: 929 chapters mapped with full video/audio shiurim**
+**Total: 929 chapters with embedded audio shiurim and video links**
 
 ## Data Sources
 
