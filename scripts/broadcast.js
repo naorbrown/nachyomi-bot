@@ -3,13 +3,14 @@
  * Daily Broadcast Script
  *
  * Sends today's Nach Yomi to:
- * 1. The Telegram channel (TELEGRAM_CHANNEL_ID)
+ * 1. The Telegram channel (TELEGRAM_CHANNEL_ID) - optional
  * 2. All private bot subscribers
  *
  * Content: Audio (embedded) + Video Link + Text
  *
  * Usage: node scripts/broadcast.js
- * Requires: TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID
+ * Requires: TELEGRAM_BOT_TOKEN
+ * Optional: TELEGRAM_CHANNEL_ID (for channel broadcast)
  */
 
 import 'dotenv/config';
@@ -36,10 +37,7 @@ if (!BOT_TOKEN) {
   process.exit(1);
 }
 
-if (!CHANNEL_ID) {
-  console.error('TELEGRAM_CHANNEL_ID required');
-  process.exit(1);
-}
+// CHANNEL_ID is optional - broadcast will still go to subscribers
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
@@ -149,13 +147,24 @@ async function runBroadcast() {
     console.warn('Text fetch failed:', err.message);
   }
 
-  // 1. Send to channel
-  console.log(`\n--- Channel: ${CHANNEL_ID} ---`);
-  await sendDailyContent(CHANNEL_ID, nachYomi, shiurId, chapterText);
-  console.log('Channel broadcast complete');
+  // 1. Send to channel (if configured)
+  if (CHANNEL_ID) {
+    console.log(`\n--- Channel: ${CHANNEL_ID} ---`);
+    await sendDailyContent(CHANNEL_ID, nachYomi, shiurId, chapterText);
+    console.log('Channel broadcast complete');
+  } else {
+    console.log('\n--- No channel configured, skipping channel broadcast ---');
+  }
 
-  // 2. Send to all subscribers
-  const subscribers = await loadSubscribers();
+  // 2. Send to all subscribers (always)
+  let subscribers = await loadSubscribers();
+
+  // Include ADMIN_CHAT_ID as a subscriber if configured (for testing/admin)
+  if (ADMIN_CHAT_ID && !subscribers.includes(Number(ADMIN_CHAT_ID))) {
+    subscribers = [Number(ADMIN_CHAT_ID), ...subscribers];
+    console.log(`Added admin (${ADMIN_CHAT_ID}) to subscriber list for broadcast`);
+  }
+
   console.log(`\n--- Subscribers: ${subscribers.length} ---`);
 
   let sent = 0;
@@ -177,10 +186,11 @@ async function runBroadcast() {
   console.log('=== BROADCAST COMPLETE ===');
 
   if (ADMIN_CHAT_ID) {
+    const channelMsg = CHANNEL_ID ? 'Channel + ' : '';
     await bot
       .sendMessage(
         ADMIN_CHAT_ID,
-        `✅ Broadcast: ${nachYomi.book} ${nachYomi.chapter}\nChannel + ${sent} subscribers`
+        `✅ Broadcast: ${nachYomi.book} ${nachYomi.chapter}\n${channelMsg}${sent} subscribers`
       )
       .catch(() => {});
   }
