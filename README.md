@@ -47,7 +47,7 @@ The bot runs entirely on GitHub Actions — no server required!
 3. Add these secrets:
    - `TELEGRAM_BOT_TOKEN` — Get from [@BotFather](https://t.me/BotFather)
    - `TELEGRAM_CHANNEL_ID` — Your channel ID (e.g., `@YourChannel` or `-100123456789`)
-   - `ADMIN_CHAT_ID` — Your chat ID for error notifications (optional)
+   - `TELEGRAM_CHAT_ID` — Your personal user ID for receiving broadcasts (get from [@userinfobot](https://t.me/userinfobot))
 4. Enable GitHub Actions in your fork
 
 **What runs automatically:**
@@ -96,7 +96,17 @@ You're automatically subscribed for daily broadcasts at 6 AM Israel time.
 |----------|----------|-------------|
 | `TELEGRAM_BOT_TOKEN` | Yes | From [@BotFather](https://t.me/BotFather) |
 | `TELEGRAM_CHANNEL_ID` | No | Channel ID for scheduled daily posts |
-| `ADMIN_CHAT_ID` | No | Chat ID for error notifications |
+| `TELEGRAM_CHAT_ID` | No | Your personal chat ID for receiving daily broadcasts |
+
+### Getting Your Chat ID
+
+To receive daily broadcasts in your private chat with the bot:
+
+1. Message [@userinfobot](https://t.me/userinfobot) on Telegram
+2. It will reply with your user ID (a positive number like `123456789`)
+3. Add this as `TELEGRAM_CHAT_ID` in your GitHub secrets
+
+**Note:** Your chat ID is a positive number. Channel/group IDs start with `-100`.
 
 ### Environment File
 
@@ -228,7 +238,7 @@ services:
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
-      - ADMIN_CHAT_ID=${ADMIN_CHAT_ID}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
 ```
 
 ```bash

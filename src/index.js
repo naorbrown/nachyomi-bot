@@ -201,16 +201,8 @@ cron.schedule(
       }
 
       console.log('Broadcast complete');
-      if (ADMIN_CHAT_ID) {
-        bot
-          .sendMessage(ADMIN_CHAT_ID, `✅ Broadcast: ${nachYomi.book} ${nachYomi.chapter}`)
-          .catch(() => {});
-      }
     } catch (err) {
       console.error('Broadcast failed:', err.message);
-      if (ADMIN_CHAT_ID) {
-        bot.sendMessage(ADMIN_CHAT_ID, `❌ Broadcast failed: ${err.message}`).catch(() => {});
-      }
     }
   },
   { timezone: 'Asia/Jerusalem' }

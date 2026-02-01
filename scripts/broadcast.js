@@ -36,8 +36,19 @@ const FORCE_BROADCAST = process.env.FORCE_BROADCAST === 'true';
 console.log('=== BROADCAST CONFIGURATION ===');
 console.log(`BOT_TOKEN: ${BOT_TOKEN ? '***' + BOT_TOKEN.slice(-4) : 'NOT SET'}`);
 console.log(`CHANNEL_ID: ${CHANNEL_ID || 'NOT SET'}`);
-console.log(`ADMIN_CHAT_ID: ${ADMIN_CHAT_ID || 'NOT SET'}`);
+console.log(`ADMIN_CHAT_ID (raw): ${process.env.ADMIN_CHAT_ID || 'NOT SET'}`);
+console.log(`TELEGRAM_CHAT_ID (raw): ${process.env.TELEGRAM_CHAT_ID || 'NOT SET'}`);
+console.log(`ADMIN_CHAT_ID (resolved): ${ADMIN_CHAT_ID || 'NOT SET'}`);
 console.log(`FORCE_BROADCAST: ${FORCE_BROADCAST}`);
+
+// Diagnostic checks
+if (ADMIN_CHAT_ID && CHANNEL_ID && ADMIN_CHAT_ID === CHANNEL_ID) {
+  console.warn('WARNING: ADMIN_CHAT_ID equals CHANNEL_ID - private chat will not receive separate broadcast!');
+}
+if (ADMIN_CHAT_ID && ADMIN_CHAT_ID.startsWith('-')) {
+  console.warn('WARNING: ADMIN_CHAT_ID starts with "-" which indicates a group/channel, not a private chat!');
+  console.warn('Private user chat IDs are positive numbers (e.g., 123456789)');
+}
 
 if (!BOT_TOKEN) {
   console.error('ERROR: TELEGRAM_BOT_TOKEN is required');
@@ -240,7 +251,7 @@ async function runBroadcast() {
     }
   }
 
-  // 4. Summary
+  // 4. Summary (logged only, no message sent to users)
   console.log('\n=== BROADCAST SUMMARY ===');
   console.log(`Nach Yomi: ${nachYomi.book} ${nachYomi.chapter}`);
   if (results.channel.attempted) {
@@ -249,21 +260,6 @@ async function runBroadcast() {
   console.log(
     `Subscribers: ${results.subscribers.success}/${results.subscribers.total} successful, ${results.subscribers.failed} failed`
   );
-
-  // 5. Send admin notification (separate from broadcast content)
-  if (ADMIN_CHAT_ID) {
-    const statusMsg = [
-      `Broadcast: ${nachYomi.book} ${nachYomi.chapter}`,
-      results.channel.attempted ? `Channel: ${results.channel.success ? 'OK' : 'FAIL'}` : null,
-      `Subscribers: ${results.subscribers.success}/${results.subscribers.total}`,
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    await bot.sendMessage(ADMIN_CHAT_ID, statusMsg).catch((err) => {
-      console.error(`Failed to send admin notification: ${err.message}`);
-    });
-  }
 
   console.log('=== BROADCAST COMPLETE ===');
   process.exit(0);
