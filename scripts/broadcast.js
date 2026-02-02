@@ -28,6 +28,7 @@ import {
 import { getShiurId, getShiurAudioUrl, getShiurUrl } from '../src/data/shiurMapping.js';
 import { isIsrael6am, getIsraelHour } from '../src/utils/israelTime.js';
 import { loadSubscribers } from '../src/utils/subscribers.js';
+import { wasBroadcastSentToday, markBroadcastSent, getIsraelDate } from '../src/utils/broadcastState.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
@@ -175,7 +176,16 @@ async function sendDailyContent(chatId, nachYomi, shiurId, chapterText, botInsta
 async function runBroadcast() {
   console.log('\n=== DAILY BROADCAST ===');
   console.log(`Time (UTC): ${new Date().toISOString()}`);
+  console.log(`Israel date: ${getIsraelDate()}`);
   console.log(`Israel hour: ${getIsraelHour()}`);
+
+  // Check if already sent today (prevents duplicates from dual cron)
+  const alreadySent = await wasBroadcastSentToday();
+  if (alreadySent && !FORCE_BROADCAST) {
+    console.log('Broadcast already sent today (Israel time), skipping.');
+    console.log('Use FORCE_BROADCAST=true to override.');
+    process.exit(0);
+  }
 
   // Time check (skip if not 6am Israel, unless forced)
   if (!FORCE_BROADCAST && !isIsrael6am()) {
@@ -184,7 +194,7 @@ async function runBroadcast() {
     process.exit(0);
   }
 
-  console.log(FORCE_BROADCAST ? 'FORCE_BROADCAST enabled - bypassing time check' : '6am Israel time confirmed');
+  console.log(FORCE_BROADCAST ? 'FORCE_BROADCAST enabled - bypassing checks' : '6am Israel time confirmed, not yet sent today');
 
   // Get today's Nach Yomi
   const nachYomi = await getTodaysNachYomi();
@@ -283,7 +293,15 @@ async function runBroadcast() {
     }
   }
 
-  // 5. Summary (logged only, no message sent to users)
+  // 5. Mark broadcast as sent (prevents duplicate from second cron)
+  const anySuccess =
+    results.channel.success || results.torahYomi.success || results.subscribers.success > 0;
+  if (anySuccess) {
+    await markBroadcastSent();
+    console.log(`\nBroadcast state updated for ${getIsraelDate()}`);
+  }
+
+  // 6. Summary (logged only, no message sent to users)
   console.log('\n=== BROADCAST SUMMARY ===');
   console.log(`Nach Yomi: ${nachYomi.book} ${nachYomi.chapter}`);
   if (results.channel.attempted) {

@@ -40,6 +40,21 @@ describe('GitHub Workflows', () => {
 
       expect(content).toMatch(/\[skip ci\]/);
     });
+
+    it('should have concurrency control', async () => {
+      const workflowPath = resolve('./.github/workflows/poll-commands.yml');
+      const content = await readFile(workflowPath, 'utf-8');
+
+      expect(content).toMatch(/concurrency:/);
+      expect(content).toMatch(/group:\s*poll-commands/);
+    });
+
+    it('should have timeout to prevent hanging jobs', async () => {
+      const workflowPath = resolve('./.github/workflows/poll-commands.yml');
+      const content = await readFile(workflowPath, 'utf-8');
+
+      expect(content).toMatch(/timeout-minutes:/);
+    });
   });
 
   describe('Daily Broadcast Workflow', () => {
@@ -72,6 +87,37 @@ describe('GitHub Workflows', () => {
       const content = await readFile(workflowPath, 'utf-8');
 
       expect(content).toMatch(/install.*ffmpeg/i);
+    });
+
+    it('should have concurrency control to prevent overlapping runs', async () => {
+      const workflowPath = resolve('./.github/workflows/daily-broadcast.yml');
+      const content = await readFile(workflowPath, 'utf-8');
+
+      expect(content).toMatch(/concurrency:/);
+      expect(content).toMatch(/group:\s*daily-broadcast/);
+    });
+
+    it('should have write permissions for state updates', async () => {
+      const workflowPath = resolve('./.github/workflows/daily-broadcast.yml');
+      const content = await readFile(workflowPath, 'utf-8');
+
+      expect(content).toMatch(/permissions:/);
+      expect(content).toMatch(/contents:\s*write/);
+    });
+
+    it('should commit broadcast state changes', async () => {
+      const workflowPath = resolve('./.github/workflows/daily-broadcast.yml');
+      const content = await readFile(workflowPath, 'utf-8');
+
+      expect(content).toMatch(/Commit broadcast state/);
+      expect(content).toMatch(/git add \.github\/state\//);
+    });
+
+    it('should mention duplicate prevention in comments', async () => {
+      const workflowPath = resolve('./.github/workflows/daily-broadcast.yml');
+      const content = await readFile(workflowPath, 'utf-8');
+
+      expect(content).toMatch(/duplicate/i);
     });
   });
 
