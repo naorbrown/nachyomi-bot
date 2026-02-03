@@ -3,8 +3,8 @@ import { readFile } from 'fs/promises';
 import { resolve } from 'path';
 
 describe('Broadcast Script', () => {
-  describe('No Retry Loop (Prevents Duplicate Messages)', () => {
-    it('should not have a retry loop that causes duplicate messages', async () => {
+  describe('No Retry (Prevents Duplicates)', () => {
+    it('should not have a retry loop that causes duplicates', async () => {
       const broadcastPath = resolve('./scripts/broadcast.js');
       const content = await readFile(broadcastPath, 'utf-8');
 

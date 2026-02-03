@@ -3,60 +3,6 @@ import { readFile } from 'fs/promises';
 import { resolve } from 'path';
 
 describe('GitHub Workflows', () => {
-  describe('Poll Commands Workflow', () => {
-    it('should have write permissions for state updates', async () => {
-      const workflowPath = resolve('./.github/workflows/poll-commands.yml');
-      const content = await readFile(workflowPath, 'utf-8');
-
-      // Must have permissions block with contents: write
-      expect(content).toMatch(/permissions:/);
-      expect(content).toMatch(/contents:\s*write/);
-    });
-
-    it('should run every 5 minutes', async () => {
-      const workflowPath = resolve('./.github/workflows/poll-commands.yml');
-      const content = await readFile(workflowPath, 'utf-8');
-
-      expect(content).toMatch(/cron:\s*'\*\/5 \* \* \* \*'/);
-    });
-
-    it('should support manual dispatch', async () => {
-      const workflowPath = resolve('./.github/workflows/poll-commands.yml');
-      const content = await readFile(workflowPath, 'utf-8');
-
-      expect(content).toMatch(/workflow_dispatch/);
-    });
-
-    it('should install FFmpeg', async () => {
-      const workflowPath = resolve('./.github/workflows/poll-commands.yml');
-      const content = await readFile(workflowPath, 'utf-8');
-
-      expect(content).toMatch(/install.*ffmpeg/i);
-    });
-
-    it('should commit state changes with skip ci', async () => {
-      const workflowPath = resolve('./.github/workflows/poll-commands.yml');
-      const content = await readFile(workflowPath, 'utf-8');
-
-      expect(content).toMatch(/\[skip ci\]/);
-    });
-
-    it('should have concurrency control', async () => {
-      const workflowPath = resolve('./.github/workflows/poll-commands.yml');
-      const content = await readFile(workflowPath, 'utf-8');
-
-      expect(content).toMatch(/concurrency:/);
-      expect(content).toMatch(/group:\s*poll-commands/);
-    });
-
-    it('should have timeout to prevent hanging jobs', async () => {
-      const workflowPath = resolve('./.github/workflows/poll-commands.yml');
-      const content = await readFile(workflowPath, 'utf-8');
-
-      expect(content).toMatch(/timeout-minutes:/);
-    });
-  });
-
   describe('Daily Broadcast Workflow', () => {
     it('should run at both 3am and 4am UTC for DST handling', async () => {
       const workflowPath = resolve('./.github/workflows/daily-broadcast.yml');

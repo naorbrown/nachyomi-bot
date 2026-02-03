@@ -38,9 +38,9 @@ Nach Yomi is the daily study of Nevi'im (Prophets) and Ketuvim (Writings) — on
 
 ## Deploy Your Own
 
-### Option 1: GitHub Actions (Free, Recommended)
+### Option 1: GitHub Actions (Daily Broadcasts)
 
-The bot runs entirely on GitHub Actions — no server required!
+Schedule daily broadcasts via GitHub Actions — no server required for channel posts!
 
 1. Fork this repository
 2. Go to **Settings → Secrets and variables → Actions**
@@ -52,9 +52,8 @@ The bot runs entirely on GitHub Actions — no server required!
 
 **What runs automatically:**
 - **Daily broadcast** at 6:00 AM Israel time (handles DST)
-- **Command polling** every 5 minutes
 
-**Note:** Commands have up to 5-minute response latency due to the polling interval. For real-time responses, use Docker or Node.js deployment instead.
+**Note:** For real-time command responses (`/today`, `/video`, etc.), use Docker or Node.js deployment.
 
 ### Option 2: Docker
 
@@ -174,12 +173,15 @@ nachyomi-bot/
 │   └── data/
 │       └── shiurMapping.js   # 929 shiur ID mappings
 ├── scripts/
-│   ├── broadcast.js          # Daily broadcast (GitHub Actions)
-│   └── poll-commands.js      # Command polling (GitHub Actions)
+│   └── broadcast.js          # Daily broadcast (GitHub Actions)
+├── tests/
+│   ├── unit/                 # Unit tests (vitest)
+│   └── fixtures/             # Mock API responses
 ├── .github/
-│   ├── workflows/            # CI/CD and bot automation
-│   └── state/                # Subscribers + update tracking
+│   ├── workflows/            # CI/CD and daily broadcast
+│   └── state/                # Subscribers + broadcast tracking
 ├── Dockerfile
+├── docker-compose.yml
 └── .env.example
 ```
 
@@ -189,7 +191,7 @@ nachyomi-bot/
 |-----------|------------|---------|
 | Runtime | Node.js 18+ | ES modules, async/await |
 | Bot Framework | node-telegram-bot-api | Telegram integration |
-| Scheduler | GitHub Actions | Daily 6 AM posts, command polling |
+| Scheduler | GitHub Actions / node-cron | Daily 6 AM posts |
 | Containerization | Docker | Alternative deployment |
 | CI/CD | GitHub Actions | Automated builds and bot operation |
 | Testing | Vitest | Unit tests with coverage |
