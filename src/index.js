@@ -9,7 +9,6 @@
 
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
-import cron from 'node-cron';
 import { getTodaysNachYomi } from './hebcalService.js';
 import { getChapterText } from './sefariaService.js';
 import {
@@ -20,11 +19,9 @@ import {
   buildWelcomeMessage,
 } from './messageBuilder.js';
 import { getShiurId, getShiurAudioUrl, getShiurUrl } from './data/shiurMapping.js';
-import { addSubscriber, loadSubscribers } from './utils/subscribers.js';
+import { addSubscriber } from './utils/subscribers.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
 
 if (!BOT_TOKEN) {
   console.error('TELEGRAM_BOT_TOKEN required');
@@ -158,56 +155,10 @@ bot.on('message', async msg => {
   }
 });
 
-// Daily broadcast at 6am Israel (always schedule, even without channel)
-cron.schedule(
-  '0 6 * * *',
-  async () => {
-    console.log('Running daily broadcast...');
-
-    try {
-      const nachYomi = await getTodaysNachYomi();
-      const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-      let chapterText = null;
-      try {
-        chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null });
-      } catch {
-        // Text fetch failed, continue without it
-      }
-
-      // Channel (only if configured)
-      if (CHANNEL_ID) {
-        await sendDailyContent(CHANNEL_ID, nachYomi, shiurId, chapterText);
-        console.log('Channel broadcast done');
-      }
-
-      // Subscribers (always broadcast to private subscribers)
-      let subscribers = await loadSubscribers();
-
-      // Include ADMIN_CHAT_ID as a subscriber if configured (for testing/admin)
-      if (ADMIN_CHAT_ID && !subscribers.includes(Number(ADMIN_CHAT_ID))) {
-        subscribers = [Number(ADMIN_CHAT_ID), ...subscribers];
-        console.log(`Added admin (${ADMIN_CHAT_ID}) to subscriber list`);
-      }
-
-      console.log(`Broadcasting to ${subscribers.length} subscribers...`);
-
-      for (const id of subscribers) {
-        try {
-          await sendDailyContent(id, nachYomi, shiurId, chapterText);
-          await new Promise(r => setTimeout(r, 100));
-        } catch (err) {
-          console.warn(`Failed for ${id}:`, err.message);
-        }
-      }
-
-      console.log('Broadcast complete');
-    } catch (err) {
-      console.error('Broadcast failed:', err.message);
-    }
-  },
-  { timezone: 'Asia/Jerusalem' }
-);
-console.log('Daily broadcast scheduled at 6am Israel');
+// Daily broadcasts are handled exclusively by GitHub Actions (scripts/broadcast.js)
+// which has deduplication, state tracking, and DST-aware scheduling.
+// This process only handles interactive commands via polling.
+console.log('Daily broadcasts delegated to GitHub Actions');
 
 bot.on('polling_error', err => console.error('Polling error:', err.message));
 bot.on('error', err => console.error('Bot error:', err.message));
