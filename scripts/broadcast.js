@@ -29,22 +29,18 @@ import { getShiurId, getShiurAudioUrl, getShiurUrl } from '../src/data/shiurMapp
 import { isIsrael6am, getIsraelHour } from '../src/utils/israelTime.js';
 import { loadSubscribers } from '../src/utils/subscribers.js';
 import { wasBroadcastSentToday, markBroadcastSent, getIsraelDate } from '../src/utils/broadcastState.js';
+import { isUnifiedChannelEnabled, publishDailyToUnified } from '../src/unified/index.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
 const FORCE_BROADCAST = process.env.FORCE_BROADCAST === 'true';
 
-// Torah Yomi unified channel (uses separate bot)
-const TORAH_YOMI_CHANNEL_ID = process.env.TORAH_YOMI_CHANNEL_ID;
-const TORAH_YOMI_BOT_TOKEN = process.env.TORAH_YOMI_CHANNEL_BOT_TOKEN;
-const TORAH_YOMI_ENABLED = process.env.TORAH_YOMI_PUBLISH_ENABLED !== 'false';
-
 console.log('=== BROADCAST CONFIGURATION ===');
 console.log(`BOT_TOKEN: ${BOT_TOKEN ? '***' + BOT_TOKEN.slice(-4) : 'NOT SET'}`);
 console.log(`CHANNEL_ID: ${CHANNEL_ID || 'NOT SET'}`);
 console.log(`TELEGRAM_CHAT_ID: ${ADMIN_CHAT_ID || 'NOT SET'}`);
-console.log(`TORAH_YOMI_CHANNEL: ${TORAH_YOMI_ENABLED && TORAH_YOMI_CHANNEL_ID ? 'ENABLED' : 'DISABLED'}`);
+console.log(`TORAH_YOMI_CHANNEL: ${isUnifiedChannelEnabled() ? 'ENABLED' : 'DISABLED'}`);
 console.log(`FORCE_BROADCAST: ${FORCE_BROADCAST}`);
 
 // Diagnostic checks
@@ -67,12 +63,6 @@ if (!ADMIN_CHAT_ID && !CHANNEL_ID) {
 }
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: false });
-
-// Torah Yomi bot (separate instance with different token)
-const torahYomiBot =
-  TORAH_YOMI_ENABLED && TORAH_YOMI_BOT_TOKEN
-    ? new TelegramBot(TORAH_YOMI_BOT_TOKEN, { polling: false })
-    : null;
 
 /**
  * Send audio shiur (embedded)
@@ -232,19 +222,19 @@ async function runBroadcast() {
     console.log('\n=== CHANNEL: Not configured, skipping ===');
   }
 
-  // 2. Send to Torah Yomi unified channel (if configured)
-  if (torahYomiBot && TORAH_YOMI_CHANNEL_ID) {
-    console.log(`\n=== TORAH YOMI CHANNEL: ${TORAH_YOMI_CHANNEL_ID} ===`);
+  // 2. Send to Torah Yomi unified channel (uses publisher with duplicate prevention)
+  if (isUnifiedChannelEnabled()) {
+    console.log('\n=== TORAH YOMI CHANNEL (via unified publisher) ===');
     results.torahYomi.attempted = true;
     try {
-      const torahYomiResult = await sendDailyContent(
-        TORAH_YOMI_CHANNEL_ID,
-        nachYomi,
-        shiurId,
-        chapterText,
-        torahYomiBot
-      );
-      results.torahYomi.success = torahYomiResult.anySuccess;
+      const torahYomiResult = await publishDailyToUnified(nachYomi, shiurId, chapterText);
+      results.torahYomi.success = torahYomiResult.sent > 0;
+      if (torahYomiResult.skipped > 0) {
+        console.log(`Torah Yomi: ${torahYomiResult.skipped} message(s) skipped (already sent today)`);
+      }
+      if (torahYomiResult.failed > 0) {
+        console.error(`Torah Yomi: ${torahYomiResult.failed} message(s) failed`);
+      }
     } catch (err) {
       console.error(`Torah Yomi channel broadcast failed: ${err.message}`);
     }
