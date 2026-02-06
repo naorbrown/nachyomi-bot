@@ -29,7 +29,8 @@ const BADGE = '📖 Nach Yomi | נ"ך יומי';
 const BOT_USERNAME = 'NachYomiBot';
 
 // Duplicate tracking
-const TRACKER_DIR = process.env.TORAH_YOMI_TRACKER_DIR || path.join(os.tmpdir(), 'torah-yomi-channel');
+const TRACKER_DIR =
+  process.env.TORAH_YOMI_TRACKER_DIR || path.join(os.tmpdir(), 'torah-yomi-channel');
 const TRACKER_FILE = path.join(TRACKER_DIR, 'published-hashes.json');
 const LOCK_FILE = path.join(TRACKER_DIR, 'published-hashes.lock');
 const LOCK_TIMEOUT_MS = 5000;
@@ -79,7 +80,9 @@ function loadTrackerFromFile() {
         publishedHashes = new Set(data.hashes || []);
         console.log(`[TorahYomi] Loaded ${publishedHashes.size} hashes from tracker`);
       } else {
-        console.log(`[TorahYomi] Tracker date "${data.date}" differs from today "${currentDate}", starting fresh`);
+        console.log(
+          `[TorahYomi] Tracker date "${data.date}" differs from today "${currentDate}", starting fresh`
+        );
         saveTrackerToFile();
       }
     }
@@ -93,7 +96,7 @@ function saveTrackerToFile() {
     const data = {
       date: currentDate,
       hashes: Array.from(publishedHashes),
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     };
     fs.writeFileSync(TRACKER_FILE, JSON.stringify(data, null, 2));
   } catch (err) {
@@ -177,7 +180,9 @@ async function checkAndMarkPublished(content, contentType = 'text') {
 
     publishedHashes.add(contentHash);
     saveTrackerToFile();
-    console.log(`[TorahYomi] Reserved for publishing: ${contentHash.slice(0, 8)}... (${contentType})`);
+    console.log(
+      `[TorahYomi] Reserved for publishing: ${contentHash.slice(0, 8)}... (${contentType})`
+    );
     return { isDuplicate: false, hash: contentHash };
   } finally {
     releaseLock();
