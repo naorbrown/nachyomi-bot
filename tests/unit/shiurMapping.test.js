@@ -102,7 +102,7 @@ describe('getSefariaApiUrl', () => {
 describe('getShiurAudioUrl', () => {
   it('should return GetMp3FileToPlay endpoint with shiur ID', () => {
     const url = getShiurAudioUrl(31470133);
-    expect(url).toBe('https://www2.kolhalashon.com/api/files/GetMp3FileToPlay/31470133');
+    expect(url).toBe('https://www.kolhalashon.com/api/files/GetMp3FileToPlay/31470133');
   });
 
   it('should return null for null shiurId', () => {
