@@ -1,7 +1,7 @@
 {
   "name": "nachyomi-bot",
-  "version": "2.1.0",
-  "description": "Daily Nach Yomi with full video and audio shiurim from Rav Breitowitz via Kol Halashon",
+  "version": "3.0.0",
+  "description": "Daily Nach Yomi — two chapters per day with audio and video shiurim from Rav Breitowitz via Kol Halashon",
   "main": "src/index.js",
   "type": "module",
   "engines": {
@@ -13,7 +13,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:api": "node test-apis.js",
     "lint": "eslint src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
     "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\"",

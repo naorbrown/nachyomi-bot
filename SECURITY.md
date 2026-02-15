@@ -47,7 +47,7 @@ const token = "your-token";  // Never do this
 ## Known Limitations
 
 - Bot token provides full bot access
-- External API calls (Hebcal, Sefaria, Kol Halashon) are not authenticated
+- External API calls to Kol Halashon are not authenticated
 
 ## Abuse Prevention
 

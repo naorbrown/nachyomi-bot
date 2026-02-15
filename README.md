@@ -2,7 +2,7 @@
 
 # Nach Yomi Bot
 
-**One chapter of Nach. Every day. With Rav Breitowitz.**
+**Two chapters of Nach. Every day. With Rav Breitowitz.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org)
@@ -26,15 +26,14 @@
 
 ## What is Nach Yomi?
 
-Nach Yomi is the daily study of Nevi'im (Prophets) and Ketuvim (Writings) — one chapter per day, completing all 929 chapters in about 2.5 years. This bot delivers each day's chapter with **audio shiurim** by Harav Yitzchok Breitowitz שליט״א embedded directly in Telegram, plus links to watch the full video.
+Nach Yomi is the daily study of Nevi'im (Prophets) and Ketuvim (Writings) — two chapters per day, covering all 742 chapters across 34 books in a 371-day cycle starting from Isaiah. This bot delivers each day's chapters with **audio shiurim** by Harav Yitzchok Breitowitz שליט״א embedded directly in Telegram, plus links to watch the full video.
 
 ### Why Use This Bot?
 
 - **Listen** — Complete audio shiurim embedded directly in Telegram (primary content)
 - **Watch** — Links to full video shiurim on Kol Halashon
-- **Read** — Full Hebrew text with English translation (Sefaria)
-- **Daily** — Follows the official Nach Yomi calendar, posts at 6 AM Israel time
-- **929 chapters** — 100% shiur coverage for all of Nach
+- **Daily** — Self-managed 2-chapter/day schedule, posts at 6 AM Israel time
+- **742 chapters** — 100% shiur coverage for all of Nach
 
 ## Deploy Your Own
 
@@ -53,7 +52,7 @@ Schedule daily broadcasts via GitHub Actions — no server required for channel 
 **What runs automatically:**
 - **Daily broadcast** at 6:00 AM Israel time (handles DST)
 
-**Note:** For real-time command responses (`/today`, `/video`, etc.), use Docker or Node.js deployment.
+**Note:** The `/start` command subscribes users to daily broadcasts.
 
 ### Option 2: Docker
 
@@ -85,7 +84,6 @@ Send `/start` to the bot. You'll receive:
 
 1. **Audio shiur** — Embedded MP3 by Rav Breitowitz
 2. **Video link** — Watch on Kol Halashon
-3. **Full text** — Hebrew + English from Sefaria
 
 You're automatically subscribed for daily broadcasts at 6 AM Israel time.
 
@@ -119,36 +117,26 @@ cp .env.example .env
 ### System Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                            Nach Yomi Bot                                  │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐                │
-│  │   Hebcal    │     │ Kol Halashon│     │   Sefaria   │                │
-│  │    API      │     │  HLS/MP3    │     │    API      │                │
-│  └──────┬──────┘     └──────┬──────┘     └──────┬──────┘                │
-│         │                   │                   │                        │
-│         ▼                   ▼                   ▼                        │
-│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐                │
-│  │  hebcal     │     │   video     │     │  sefaria    │                │
-│  │  Service    │     │  Service    │     │  Service    │                │
-│  └──────┬──────┘     └──────┬──────┘     └──────┬──────┘                │
-│         │                   │                   │                        │
-│         └───────────────────┼───────────────────┘                        │
-│                             ▼                                            │
-│                    ┌─────────────────┐                                   │
-│                    │   index.js      │                                   │
-│                    │  Bot Commands   │                                   │
-│                    │  & Scheduler    │                                   │
-│                    └────────┬────────┘                                   │
-│                             │                                            │
-│                             ▼                                            │
-│                    ┌─────────────────┐                                   │
-│                    │ messageBuilder  │                                   │
-│                    │  & Keyboards    │                                   │
-│                    └────────┬────────┘                                   │
-│                             │                                            │
-└─────────────────────────────┼────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                       Nach Yomi Bot                          │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐    │
+│  │ schedule      │  │ shiurMapping  │  │ message       │    │
+│  │ Service       │  │ (Kol Halashon │  │ Builder       │    │
+│  │ (2-chapter    │  │  shiur IDs)   │  │ (formatting)  │    │
+│  │  schedule)    │  │               │  │               │    │
+│  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘    │
+│          │                  │                   │            │
+│          └──────────────────┼───────────────────┘            │
+│                             ▼                                │
+│                    ┌─────────────────┐                       │
+│                    │   index.js      │                       │
+│                    │  Bot Commands   │                       │
+│                    │  & Scheduler    │                       │
+│                    └────────┬────────┘                       │
+│                             │                                │
+└─────────────────────────────┼────────────────────────────────┘
                               ▼
                      ┌─────────────────┐
                      │    Telegram     │
@@ -162,21 +150,22 @@ cp .env.example .env
 nachyomi-bot/
 ├── src/
 │   ├── index.js              # Bot entry, commands, scheduler
-│   ├── hebcalService.js      # Nach Yomi calendar API
-│   ├── sefariaService.js     # Hebrew/English text
+│   ├── scheduleService.js    # Self-managed 2-chapter schedule
 │   ├── messageBuilder.js     # Message formatting
+│   ├── unified/              # Unified broadcast logic
+│   │   └── index.js
 │   ├── utils/
 │   │   ├── subscribers.js    # Subscriber management
+│   │   ├── broadcastState.js # Broadcast state tracking
 │   │   ├── commandParser.js  # Command parsing
 │   │   ├── israelTime.js     # Israel timezone utilities
 │   │   └── rateLimiter.js    # Rate limiting
 │   └── data/
-│       └── shiurMapping.js   # 929 shiur ID mappings
+│       └── shiurMapping.js   # 742 shiur ID mappings
 ├── scripts/
 │   └── broadcast.js          # Daily broadcast (GitHub Actions)
 ├── tests/
-│   ├── unit/                 # Unit tests (vitest)
-│   └── fixtures/             # Mock API responses
+│   └── unit/                 # Unit tests (vitest)
 ├── .github/
 │   ├── workflows/            # CI/CD and daily broadcast
 │   └── state/                # Subscribers + broadcast tracking
@@ -199,12 +188,11 @@ nachyomi-bot/
 
 ### Data Flow
 
-1. **Schedule Fetch**: Hebcal API → Today's book/chapter
+1. **Schedule**: Self-managed 2-chapter/day cycle (371 days, starting from Isaiah)
 2. **Content Assembly**:
    - Audio: Direct MP3 URL from Kol Halashon (embedded in Telegram)
    - Video: Link to Kol Halashon video page
-   - Text: Sefaria API → Hebrew + English verses
-3. **Delivery**: Telegram Bot API → User/Channel (audio first, then video link, then text)
+3. **Delivery**: Telegram Bot API → User/Channel (audio shiur + video link)
 
 ## How Content Delivery Works
 
@@ -218,7 +206,6 @@ nachyomi-bot/
 **Audio-First Approach:**
 1. **Audio (Primary)**: Embedded MP3 shiur plays directly in Telegram
 2. **Video (Link)**: Direct link to watch on Kol Halashon
-3. **Text**: Full Hebrew + English chapter from Sefaria
 
 This approach provides:
 - Fast delivery (no video processing)
@@ -326,15 +313,13 @@ Audio shiurim (embedded) and video links are available for **all books** with co
 | I Chronicles | 1-29 | ✅ 100% |
 | II Chronicles | 1-36 | ✅ 100% |
 
-**Total: 929 chapters with embedded audio shiurim and video links**
+**Total: 742 chapters with embedded audio shiurim and video links**
 
 ## Data Sources
 
 | Source | Purpose | API |
 |--------|---------|-----|
-| [Hebcal](https://hebcal.com) | Nach Yomi daily schedule | REST |
 | [Kol Halashon](https://kolhalashon.com) | Video/Audio shiurim | HLS/MP3 |
-| [Sefaria](https://sefaria.org) | Hebrew + English text | REST |
 
 ## Development
 
@@ -399,8 +384,6 @@ See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 - **Harav Yitzchok Breitowitz שליט״א** — The shiurim that make this bot possible
 - **[Kol Halashon](https://kolhalashon.com)** — Preserving and sharing Torah worldwide
-- **[Hebcal](https://hebcal.com)** — Nach Yomi calendar API
-- **[Sefaria](https://sefaria.org)** — Open-source texts and translations
 
 ---
 

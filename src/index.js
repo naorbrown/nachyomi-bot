@@ -19,6 +19,7 @@ import {
 } from './messageBuilder.js';
 import { getShiurAudioUrl, getShiurUrl } from './data/shiurMapping.js';
 import { addSubscriber } from './utils/subscribers.js';
+import { createRateLimiter } from './utils/rateLimiter.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -29,20 +30,7 @@ if (!BOT_TOKEN) {
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
-// Rate limiting
-const rateLimits = new Map();
-
-function isRateLimited(chatId) {
-  const now = Date.now();
-  const history = rateLimits.get(chatId) || [];
-  const recent = history.filter(t => now - t < 60000);
-
-  if (recent.length >= 5) return true;
-
-  recent.push(now);
-  rateLimits.set(chatId, recent);
-  return false;
-}
+const limiter = createRateLimiter();
 
 // Initialize
 (async () => {
@@ -117,7 +105,7 @@ bot.on('message', async msg => {
 
   if (command !== 'start') return;
 
-  if (isRateLimited(chatId)) {
+  if (limiter.isRateLimited(chatId)) {
     return bot.sendMessage(chatId, '_Please wait._', { parse_mode: 'Markdown' });
   }
 

@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-02-15
+
+### Added
+
+- Self-managed 2-chapter/day schedule starting from Isaiah 1
+- 742 chapters across 34 books in a 371-day cycle that loops forever
+- `scheduleService.js` — pure date-arithmetic, no external API dependency
+- Day header with Hebrew book names and numerals
+- Subscriber unit tests
+
+### Changed
+
+- Audio URL domain changed from `www2.kolhalashon.com` to `www.kolhalashon.com` (fixes Telegram embedding)
+- Bot sends 2 chapters per broadcast instead of 1
+- Rate limiting in index.js now uses the `rateLimiter.js` utility
+
+### Removed
+
+- Hebcal API integration (`hebcalService.js`) — schedule is now self-managed
+- Sefaria API integration (`sefariaService.js`) — text content removed
+- Video service (`videoService.js`) — video sent as links only
+- FFmpeg dependency — no longer needed
+- Broken utility scripts (`test-apis.js`, `test-video.js`, `get-chat-id.js`)
+- `node-fetch` dependency
+
+### Breaking
+
+- Daily content no longer includes Hebrew/English text from Sefaria
+- Schedule follows a custom 2-chapter/day cycle, not the traditional Nach Yomi calendar
+
 ## [2.1.0] - 2026-01-30
 
 ### Added
