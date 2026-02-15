@@ -28,13 +28,6 @@ describe('GitHub Workflows', () => {
       expect(content).toMatch(/DST|daylight/i);
     });
 
-    it('should install FFmpeg', async () => {
-      const workflowPath = resolve('./.github/workflows/daily-broadcast.yml');
-      const content = await readFile(workflowPath, 'utf-8');
-
-      expect(content).toMatch(/install.*ffmpeg/i);
-    });
-
     it('should have concurrency control to prevent overlapping runs', async () => {
       const workflowPath = resolve('./.github/workflows/daily-broadcast.yml');
       const content = await readFile(workflowPath, 'utf-8');

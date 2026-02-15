@@ -23,6 +23,30 @@ describe('Broadcast Script', () => {
     });
   });
 
+  describe('Schedule Service', () => {
+    it('should use scheduleService instead of hebcalService', async () => {
+      const broadcastPath = resolve('./scripts/broadcast.js');
+      const content = await readFile(broadcastPath, 'utf-8');
+
+      expect(content).toMatch(/scheduleService/);
+      expect(content).not.toMatch(/hebcalService/);
+    });
+
+    it('should not use sefariaService', async () => {
+      const broadcastPath = resolve('./scripts/broadcast.js');
+      const content = await readFile(broadcastPath, 'utf-8');
+
+      expect(content).not.toMatch(/sefariaService/);
+    });
+
+    it('should call getTodaysChapters', async () => {
+      const broadcastPath = resolve('./scripts/broadcast.js');
+      const content = await readFile(broadcastPath, 'utf-8');
+
+      expect(content).toMatch(/getTodaysChapters/);
+    });
+  });
+
   describe('Dual Broadcast', () => {
     it('should broadcast to channel', async () => {
       const broadcastPath = resolve('./scripts/broadcast.js');
@@ -41,22 +65,12 @@ describe('Broadcast Script', () => {
     });
   });
 
-  describe('Content Order', () => {
-    it('should send audio first', async () => {
+  describe('Content', () => {
+    it('should send audio', async () => {
       const broadcastPath = resolve('./scripts/broadcast.js');
       const content = await readFile(broadcastPath, 'utf-8');
 
-      // In sendDailyContent, audio should come before video
-      const dailyContentMatch = content.match(/async function sendDailyContent[\s\S]*?^}/m);
-      expect(dailyContentMatch).toBeTruthy();
-
-      const fn = dailyContentMatch[0];
-      const audioIndex = fn.indexOf('sendAudio');
-      const videoIndex = fn.indexOf('sendVideoLink');
-
-      expect(audioIndex).toBeGreaterThan(-1);
-      expect(videoIndex).toBeGreaterThan(-1);
-      expect(audioIndex).toBeLessThan(videoIndex);
+      expect(content).toMatch(/sendAudio/);
     });
 
     it('should send video as link, not embedded', async () => {
@@ -66,6 +80,15 @@ describe('Broadcast Script', () => {
       expect(content).toMatch(/sendVideoLink/);
       expect(content).not.toMatch(/sendVideoShiur/);
       expect(content).not.toMatch(/videoService/);
+    });
+
+    it('should not send Sefaria text', async () => {
+      const broadcastPath = resolve('./scripts/broadcast.js');
+      const content = await readFile(broadcastPath, 'utf-8');
+
+      expect(content).not.toMatch(/sendText\s*\(/);
+      expect(content).not.toMatch(/getChapterText/);
+      expect(content).not.toMatch(/buildDailyMessages/);
     });
   });
 

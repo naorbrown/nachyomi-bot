@@ -1,24 +1,23 @@
 /**
  * Nach Yomi Telegram Bot
  *
- * Daily Nach Yomi chapter with Rav Breitowitz's shiurim from Kol Halashon.
- * Audio embedded, video as link, full Hebrew + English text.
+ * Daily Nach chapters with Rav Breitowitz's shiurim from Kol Halashon.
+ * Audio embedded, video as link. Two chapters per day.
  *
- * /start - Subscribe and get today's shiur
+ * /start - Subscribe and get today's shiurim
  */
 
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
-import { getTodaysNachYomi } from './hebcalService.js';
-import { getChapterText } from './sefariaService.js';
+import { getTodaysChapters } from './scheduleService.js';
 import {
-  buildDailyMessages,
-  buildKeyboard,
+  buildDayHeader,
   buildMediaCaption,
   buildMediaKeyboard,
+  buildKeyboard,
   buildWelcomeMessage,
 } from './messageBuilder.js';
-import { getShiurId, getShiurAudioUrl, getShiurUrl } from './data/shiurMapping.js';
+import { getShiurAudioUrl, getShiurUrl } from './data/shiurMapping.js';
 import { addSubscriber } from './utils/subscribers.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -47,23 +46,23 @@ function isRateLimited(chatId) {
 
 // Initialize
 (async () => {
-  await bot.setMyCommands([{ command: 'start', description: "Today's Nach Yomi shiur" }]);
+  await bot.setMyCommands([{ command: 'start', description: "Today's Nach Yomi shiurim" }]);
   console.log('Nach Yomi Bot started');
 })();
 
 /**
  * Send audio (embedded)
  */
-async function sendAudio(chatId, nachYomi, shiurId) {
-  if (!shiurId) return false;
+async function sendAudio(chatId, chapter) {
+  if (!chapter.shiurId) return false;
 
   try {
-    await bot.sendAudio(chatId, getShiurAudioUrl(shiurId), {
-      title: `${nachYomi.book} ${nachYomi.chapter}`,
+    await bot.sendAudio(chatId, getShiurAudioUrl(chapter.shiurId), {
+      title: `${chapter.book} ${chapter.chapter}`,
       performer: 'Rav Yitzchok Breitowitz',
-      caption: buildMediaCaption(nachYomi, 'audio'),
+      caption: buildMediaCaption(chapter, 'audio'),
       parse_mode: 'Markdown',
-      reply_markup: buildMediaKeyboard(nachYomi.book, nachYomi.chapter),
+      reply_markup: buildMediaKeyboard(chapter.book, chapter.chapter),
     });
     return true;
   } catch (err) {
@@ -75,14 +74,15 @@ async function sendAudio(chatId, nachYomi, shiurId) {
 /**
  * Send video link
  */
-async function sendVideoLink(chatId, nachYomi) {
+async function sendVideoLink(chatId, chapter, isLast = false) {
   try {
     await bot.sendMessage(
       chatId,
-      `🎬 [Watch Video Shiur](${getShiurUrl(nachYomi.book, nachYomi.chapter)})`,
+      `🎬 [Watch Video Shiur — ${chapter.book} ${chapter.chapter}](${getShiurUrl(chapter.book, chapter.chapter)})`,
       {
         parse_mode: 'Markdown',
         disable_web_page_preview: true,
+        reply_markup: isLast ? buildKeyboard(chapter.book, chapter.chapter) : undefined,
       }
     );
     return true;
@@ -93,28 +93,19 @@ async function sendVideoLink(chatId, nachYomi) {
 }
 
 /**
- * Send chapter text
- */
-async function sendText(chatId, nachYomi, chapterText) {
-  const messages = buildDailyMessages(nachYomi, chapterText);
-
-  for (let i = 0; i < messages.length; i++) {
-    await bot.sendMessage(chatId, messages[i], {
-      parse_mode: 'Markdown',
-      reply_markup:
-        i === messages.length - 1 ? buildKeyboard(nachYomi.book, nachYomi.chapter) : undefined,
-      disable_web_page_preview: true,
-    });
-  }
-}
-
-/**
  * Send full daily content to a chat
  */
-async function sendDailyContent(chatId, nachYomi, shiurId, chapterText) {
-  await sendAudio(chatId, nachYomi, shiurId);
-  await sendVideoLink(chatId, nachYomi);
-  await sendText(chatId, nachYomi, chapterText);
+async function sendDailyContent(chatId, todaysSchedule) {
+  // Day header
+  await bot.sendMessage(chatId, buildDayHeader(todaysSchedule), { parse_mode: 'Markdown' });
+
+  // Audio + video for each chapter
+  for (let i = 0; i < todaysSchedule.chapters.length; i++) {
+    const chapter = todaysSchedule.chapters[i];
+    const isLast = i === todaysSchedule.chapters.length - 1;
+    await sendAudio(chatId, chapter);
+    await sendVideoLink(chatId, chapter, isLast);
+  }
 }
 
 // Command handler
@@ -139,16 +130,8 @@ bot.on('message', async msg => {
     await bot.sendMessage(chatId, buildWelcomeMessage(), { parse_mode: 'Markdown' });
 
     // Get today's content
-    const nachYomi = await getTodaysNachYomi();
-    const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-    let chapterText = null;
-    try {
-      chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null });
-    } catch {
-      // Text fetch failed, continue without it
-    }
-
-    await sendDailyContent(chatId, nachYomi, shiurId, chapterText);
+    const todaysSchedule = getTodaysChapters();
+    await sendDailyContent(chatId, todaysSchedule);
   } catch (err) {
     console.error('Command failed:', err.message);
     await bot.sendMessage(chatId, '❌ Error. Please try again.').catch(() => {});

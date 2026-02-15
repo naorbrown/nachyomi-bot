@@ -2,13 +2,13 @@
 /**
  * Daily Broadcast Script
  *
- * Sends today's Nach Yomi to:
+ * Sends today's 2 Nach chapters to:
  * 1. The Telegram channel (TELEGRAM_CHANNEL_ID) - optional
  * 2. Torah Yomi unified channel (TORAH_YOMI_CHANNEL_ID) - optional
  * 3. All private bot subscribers
  * 4. Admin chat (TELEGRAM_CHAT_ID) - always included
  *
- * Content: Audio (embedded) + Video Link + Full Text
+ * Content: Day header + Audio (embedded) + Video Link per chapter
  *
  * Usage: node scripts/broadcast.js
  * Requires: TELEGRAM_BOT_TOKEN
@@ -17,15 +17,9 @@
 
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
-import { getTodaysNachYomi } from '../src/hebcalService.js';
-import { getChapterText } from '../src/sefariaService.js';
-import {
-  buildDailyMessages,
-  buildKeyboard,
-  buildMediaCaption,
-  buildMediaKeyboard,
-} from '../src/messageBuilder.js';
-import { getShiurId, getShiurAudioUrl, getShiurUrl } from '../src/data/shiurMapping.js';
+import { getTodaysChapters } from '../src/scheduleService.js';
+import { buildDayHeader, buildMediaCaption, buildMediaKeyboard, buildKeyboard } from '../src/messageBuilder.js';
+import { getShiurAudioUrl, getShiurUrl } from '../src/data/shiurMapping.js';
 import { isIsrael6am, getIsraelHour } from '../src/utils/israelTime.js';
 import { loadSubscribers } from '../src/utils/subscribers.js';
 import { wasBroadcastSentToday, markBroadcastSent, getIsraelDate } from '../src/utils/broadcastState.js';
@@ -66,27 +60,28 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
 /**
  * Send audio shiur (embedded)
+ * NO RETRY: Prevents duplicates if partial failure occurs
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function sendAudio(chatId, nachYomi, shiurId, botInstance = bot) {
-  if (!shiurId) {
+async function sendAudio(chatId, chapter, botInstance = bot) {
+  if (!chapter.shiurId) {
     return { success: false, error: 'No shiur ID' };
   }
 
   try {
-    const audioUrl = getShiurAudioUrl(shiurId);
-    console.log(`  Sending audio to ${chatId}...`);
+    const audioUrl = getShiurAudioUrl(chapter.shiurId);
+    console.log(`  Sending audio for ${chapter.book} ${chapter.chapter} to ${chatId}...`);
     await botInstance.sendAudio(chatId, audioUrl, {
-      title: `${nachYomi.book} ${nachYomi.chapter}`,
+      title: `${chapter.book} ${chapter.chapter}`,
       performer: 'Rav Yitzchok Breitowitz',
-      caption: buildMediaCaption(nachYomi, 'audio'),
+      caption: buildMediaCaption(chapter, 'audio'),
       parse_mode: 'Markdown',
-      reply_markup: buildMediaKeyboard(nachYomi.book, nachYomi.chapter),
+      reply_markup: buildMediaKeyboard(chapter.book, chapter.chapter),
     });
-    console.log(`  Audio sent successfully to ${chatId}`);
+    console.log(`  Audio sent successfully`);
     return { success: true };
   } catch (err) {
-    console.error(`  Audio FAILED for ${chatId}: ${err.message}`);
+    console.error(`  Audio FAILED for ${chapter.book} ${chapter.chapter}: ${err.message}`);
     return { success: false, error: err.message };
   }
 }
@@ -95,44 +90,20 @@ async function sendAudio(chatId, nachYomi, shiurId, botInstance = bot) {
  * Send video link
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function sendVideoLink(chatId, nachYomi, botInstance = bot) {
-  const shiurPageUrl = getShiurUrl(nachYomi.book, nachYomi.chapter);
+async function sendVideoLink(chatId, chapter, isLast = false, botInstance = bot) {
+  const shiurPageUrl = getShiurUrl(chapter.book, chapter.chapter);
 
   try {
-    console.log(`  Sending video link to ${chatId}...`);
-    await botInstance.sendMessage(chatId, `[Watch Video Shiur](${shiurPageUrl})`, {
+    console.log(`  Sending video link for ${chapter.book} ${chapter.chapter} to ${chatId}...`);
+    await botInstance.sendMessage(chatId, `🎬 [Watch Video Shiur — ${chapter.book} ${chapter.chapter}](${shiurPageUrl})`, {
       parse_mode: 'Markdown',
       disable_web_page_preview: true,
+      reply_markup: isLast ? buildKeyboard(chapter.book, chapter.chapter) : undefined,
     });
-    console.log(`  Video link sent successfully to ${chatId}`);
+    console.log(`  Video link sent successfully`);
     return { success: true };
   } catch (err) {
-    console.error(`  Video link FAILED for ${chatId}: ${err.message}`);
-    return { success: false, error: err.message };
-  }
-}
-
-/**
- * Send chapter text
- * @returns {Promise<{success: boolean, error?: string}>}
- */
-async function sendText(chatId, nachYomi, chapterText, botInstance = bot) {
-  try {
-    const messages = buildDailyMessages(nachYomi, chapterText);
-    console.log(`  Sending ${messages.length} text message(s) to ${chatId}...`);
-
-    for (let i = 0; i < messages.length; i++) {
-      const isLast = i === messages.length - 1;
-      await botInstance.sendMessage(chatId, messages[i], {
-        parse_mode: 'Markdown',
-        reply_markup: isLast ? buildKeyboard(nachYomi.book, nachYomi.chapter) : undefined,
-        disable_web_page_preview: true,
-      });
-    }
-    console.log(`  Text sent successfully to ${chatId}`);
-    return { success: true };
-  } catch (err) {
-    console.error(`  Text FAILED for ${chatId}: ${err.message}`);
+    console.error(`  Video link FAILED for ${chapter.book} ${chapter.chapter}: ${err.message}`);
     return { success: false, error: err.message };
   }
 }
@@ -140,27 +111,37 @@ async function sendText(chatId, nachYomi, chapterText, botInstance = bot) {
 /**
  * Send full daily content to a single chat
  * NO RETRY: Prevents duplicates if partial failure occurs
- * @returns {Promise<{audio: boolean, video: boolean, text: boolean, anySuccess: boolean}>}
+ * @returns {Promise<{anySuccess: boolean}>}
  */
-async function sendDailyContent(chatId, nachYomi, shiurId, chapterText, botInstance = bot) {
+async function sendDailyContent(chatId, todaysSchedule, botInstance = bot) {
   console.log(`\nSending to chat ${chatId}:`);
 
-  const audioResult = await sendAudio(chatId, nachYomi, shiurId, botInstance);
-  const videoResult = await sendVideoLink(chatId, nachYomi, botInstance);
-  const textResult = await sendText(chatId, nachYomi, chapterText, botInstance);
+  let anySuccess = false;
 
-  const anySuccess = audioResult.success || videoResult.success || textResult.success;
+  // Send day header
+  try {
+    await botInstance.sendMessage(chatId, buildDayHeader(todaysSchedule), {
+      parse_mode: 'Markdown',
+    });
+    anySuccess = true;
+  } catch (err) {
+    console.error(`  Header FAILED for ${chatId}: ${err.message}`);
+  }
 
-  console.log(
-    `  Result for ${chatId}: audio=${audioResult.success}, video=${videoResult.success}, text=${textResult.success}`
-  );
+  // Send audio + video for each chapter
+  for (let i = 0; i < todaysSchedule.chapters.length; i++) {
+    const chapter = todaysSchedule.chapters[i];
+    const isLast = i === todaysSchedule.chapters.length - 1;
 
-  return {
-    audio: audioResult.success,
-    video: videoResult.success,
-    text: textResult.success,
-    anySuccess,
-  };
+    const audioResult = await sendAudio(chatId, chapter, botInstance);
+    const videoResult = await sendVideoLink(chatId, chapter, isLast, botInstance);
+
+    if (audioResult.success || videoResult.success) anySuccess = true;
+  }
+
+  console.log(`  Result for ${chatId}: ${anySuccess ? 'SUCCESS' : 'ALL FAILED'}`);
+
+  return { anySuccess };
 }
 
 async function runBroadcast() {
@@ -186,20 +167,11 @@ async function runBroadcast() {
 
   console.log(FORCE_BROADCAST ? 'FORCE_BROADCAST enabled - bypassing checks' : '6am Israel time confirmed, not yet sent today');
 
-  // Get today's Nach Yomi
-  const nachYomi = await getTodaysNachYomi();
-  console.log(`\nToday's Nach Yomi: ${nachYomi.book} ${nachYomi.chapter}`);
-
-  const shiurId = getShiurId(nachYomi.book, nachYomi.chapter);
-  console.log(`Shiur ID: ${shiurId || 'NOT FOUND'}`);
-
-  // Fetch chapter text once (shared by all recipients)
-  let chapterText = null;
-  try {
-    chapterText = await getChapterText(nachYomi.book, nachYomi.chapter, { maxVerses: null });
-    console.log('Chapter text fetched successfully');
-  } catch (err) {
-    console.warn('Chapter text fetch failed:', err.message);
+  // Get today's chapters
+  const todaysSchedule = getTodaysChapters();
+  console.log(`\nToday's Nach Yomi (Day ${todaysSchedule.dayNumber}, Cycle ${todaysSchedule.cycleNumber}):`);
+  for (const ch of todaysSchedule.chapters) {
+    console.log(`  ${ch.book} ${ch.chapter} (shiur: ${ch.shiurId || 'NOT FOUND'})`);
   }
 
   const results = {
@@ -213,7 +185,7 @@ async function runBroadcast() {
     console.log(`\n=== CHANNEL BROADCAST: ${CHANNEL_ID} ===`);
     results.channel.attempted = true;
     try {
-      const channelResult = await sendDailyContent(CHANNEL_ID, nachYomi, shiurId, chapterText);
+      const channelResult = await sendDailyContent(CHANNEL_ID, todaysSchedule);
       results.channel.success = channelResult.anySuccess;
     } catch (err) {
       console.error(`Channel broadcast failed: ${err.message}`);
@@ -227,7 +199,7 @@ async function runBroadcast() {
     console.log('\n=== TORAH YOMI CHANNEL (via unified publisher) ===');
     results.torahYomi.attempted = true;
     try {
-      const torahYomiResult = await publishDailyToUnified(nachYomi, shiurId, chapterText);
+      const torahYomiResult = await publishDailyToUnified(todaysSchedule);
       results.torahYomi.success = torahYomiResult.sent > 0;
       if (torahYomiResult.skipped > 0) {
         console.log(`Torah Yomi: ${torahYomiResult.skipped} message(s) skipped (already sent today)`);
@@ -268,7 +240,7 @@ async function runBroadcast() {
   // 4. Send to each subscriber
   for (const chatId of subscribers) {
     try {
-      const result = await sendDailyContent(chatId, nachYomi, shiurId, chapterText);
+      const result = await sendDailyContent(chatId, todaysSchedule);
       if (result.anySuccess) {
         results.subscribers.success++;
       } else {
@@ -293,7 +265,7 @@ async function runBroadcast() {
 
   // 6. Summary (logged only, no message sent to users)
   console.log('\n=== BROADCAST SUMMARY ===');
-  console.log(`Nach Yomi: ${nachYomi.book} ${nachYomi.chapter}`);
+  console.log(`Day ${todaysSchedule.dayNumber}: ${todaysSchedule.chapters.map((c) => `${c.book} ${c.chapter}`).join(' + ')}`);
   if (results.channel.attempted) {
     console.log(`Channel: ${results.channel.success ? 'SUCCESS' : 'FAILED'}`);
   }

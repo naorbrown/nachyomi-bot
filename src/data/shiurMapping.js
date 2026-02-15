@@ -848,44 +848,6 @@ export const shiurMapping = {
   },
 };
 
-// Name mappings between Hebcal format and our internal format
-export const hebcalToInternal = {
-  Joshua: 'Joshua',
-  Judges: 'Judges',
-  'I Samuel': 'I Samuel',
-  'II Samuel': 'II Samuel',
-  'I Kings': 'I Kings',
-  'II Kings': 'II Kings',
-  Isaiah: 'Isaiah',
-  Jeremiah: 'Jeremiah',
-  Ezekiel: 'Ezekiel',
-  Hosea: 'Hosea',
-  Joel: 'Joel',
-  Amos: 'Amos',
-  Obadiah: 'Obadiah',
-  Jonah: 'Jonah',
-  Micah: 'Micah',
-  Nahum: 'Nahum',
-  Habakkuk: 'Habakkuk',
-  Zephaniah: 'Zephaniah',
-  Haggai: 'Haggai',
-  Zechariah: 'Zechariah',
-  Malachi: 'Malachi',
-  Psalms: 'Psalms',
-  Proverbs: 'Proverbs',
-  Job: 'Job',
-  'Song of Songs': 'Song of Songs',
-  Ruth: 'Ruth',
-  Lamentations: 'Lamentations',
-  Ecclesiastes: 'Ecclesiastes',
-  Esther: 'Esther',
-  Daniel: 'Daniel',
-  Ezra: 'Ezra',
-  Nehemiah: 'Nehemiah',
-  'I Chronicles': 'I Chronicles',
-  'II Chronicles': 'II Chronicles',
-};
-
 // Hebrew names for display
 export const hebrewNames = {
   Joshua: 'יהושע',
