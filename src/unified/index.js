@@ -16,7 +16,6 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { createReadStream } from 'fs';
 
 // Configuration from environment
 const UNIFIED_CHANNEL_ID = process.env.TORAH_YOMI_CHANNEL_ID;
@@ -38,7 +37,6 @@ const LOCK_RETRY_INTERVAL_MS = 50;
 const LOCK_STALE_MS = 30000;
 
 // Rate limiting
-const RATE_LIMIT_DELAY = 100; // ms between messages
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // ms
 
@@ -292,56 +290,6 @@ export async function publishTextToUnified(text, options = {}) {
 }
 
 /**
- * Publish a video to the unified channel (with duplicate prevention).
- * @returns {Promise<'sent'|'skipped'|'failed'>}
- */
-export async function publishVideoToUnified(video, caption, options = {}) {
-  if (!isUnifiedChannelEnabled()) {
-    console.log('[TorahYomi] Unified channel publish disabled or not configured');
-    return 'skipped';
-  }
-
-  const contentKey = `${video}:${caption}`;
-  const { isDuplicate } = await checkAndMarkPublished(contentKey, 'video');
-  if (isDuplicate) {
-    console.warn('[TorahYomi] Duplicate video detected, skipping publish');
-    return 'skipped';
-  }
-
-  const bot = getBot();
-  if (!bot) {
-    console.error('[TorahYomi] No bot token configured');
-    return 'failed';
-  }
-
-  const formattedCaption = formatForUnifiedChannel(caption);
-
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const videoSource = typeof video === 'string' ? video : createReadStream(video.path || video);
-      await bot.sendVideo(UNIFIED_CHANNEL_ID, videoSource, {
-        caption: formattedCaption,
-        parse_mode: 'Markdown',
-        supports_streaming: true,
-        ...options,
-      });
-      console.log('[TorahYomi] Published video to unified channel');
-      return 'sent';
-    } catch (error) {
-      console.error(`[TorahYomi] Video publish attempt ${attempt} failed:`, error.message);
-      if (isRetryableError(error) && attempt < MAX_RETRIES) {
-        await sleep(RETRY_DELAY * attempt);
-      } else {
-        break;
-      }
-    }
-  }
-
-  console.error('[TorahYomi] All video publish attempts failed');
-  return 'failed';
-}
-
-/**
  * Publish an audio file to the unified channel (with duplicate prevention).
  * @returns {Promise<'sent'|'skipped'|'failed'>}
  */
@@ -392,9 +340,10 @@ export async function publishAudioToUnified(audio, caption, options = {}) {
 /**
  * Publish the daily Nach Yomi content to the unified channel.
  * Uses duplicate prevention — safe to call multiple times per day.
+ * @param {{ dayNumber: number, chapters: Array<{book: string, chapter: number, shiurId: number|null}> }} todaysSchedule
  * @returns {Promise<{sent: number, skipped: number, failed: number}>}
  */
-export async function publishDailyToUnified(nachYomi, shiurId, chapterText, videoPath = null) {
+export async function publishDailyToUnified(todaysSchedule) {
   if (!isUnifiedChannelEnabled()) {
     return { sent: 0, skipped: 0, failed: 0 };
   }
@@ -409,37 +358,25 @@ export async function publishDailyToUnified(nachYomi, shiurId, chapterText, vide
     else failed++;
   }
 
-  const summaryText = buildUnifiedSummary(nachYomi, shiurId, chapterText);
-
-  // 1. Publish video if available
-  if (videoPath) {
-    const videoCaption = `🎬 *${nachYomi.book} ${nachYomi.chapter}*\n_Video shiur by Rav Yitzchok Breitowitz_`;
-    tally(await publishVideoToUnified(videoPath, videoCaption));
-    await sleep(RATE_LIMIT_DELAY);
-  }
-
-  // 2. Publish summary text
+  // Publish summary text
+  const summaryText = buildUnifiedSummary(todaysSchedule);
   tally(await publishTextToUnified(summaryText));
 
   return { sent, skipped, failed };
 }
 
 /**
- * Build unified channel summary message
+ * Build unified channel summary message for the day's chapters
  */
-function buildUnifiedSummary(nachYomi, shiurId, chapterText) {
-  let text = `📖 *${nachYomi.book} ${nachYomi.chapter}*\n`;
-  text += `_${nachYomi.hebrewBook} ${nachYomi.hebrewChapter || ''}_\n\n`;
+function buildUnifiedSummary(todaysSchedule) {
+  const { dayNumber, chapters } = todaysSchedule;
+  let text = `📖 *Nach Yomi — Day ${dayNumber}*\n\n`;
 
-  if (chapterText && chapterText.verses && chapterText.verses.length > 0) {
-    const firstVerse = chapterText.verses[0];
-    if (firstVerse.hebrew) {
-      text += `*פסוק א׳:*\n${firstVerse.hebrew}\n\n`;
-    }
+  for (const ch of chapters) {
+    text += `*${ch.book} ${ch.chapter}*\n`;
   }
 
-  text += `🎧 Audio & 🎬 Video shiurim by *Rav Yitzchok Breitowitz*\n`;
-  text += `📚 Full chapter with Hebrew/English text\n\n`;
+  text += `\n🎧 Audio & 🎬 Video shiurim by *Rav Yitzchok Breitowitz*\n\n`;
   text += `_Use @NachYomiBot for the complete experience_`;
 
   return text;
@@ -448,7 +385,6 @@ function buildUnifiedSummary(nachYomi, shiurId, chapterText) {
 export default {
   isUnifiedChannelEnabled,
   publishTextToUnified,
-  publishVideoToUnified,
   publishAudioToUnified,
   publishDailyToUnified,
 };

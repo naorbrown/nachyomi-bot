@@ -1,114 +1,58 @@
 import { describe, it, expect } from 'vitest';
 import {
-  buildDailyMessages,
-  buildDailyMessage,
+  buildDayHeader,
   buildMediaCaption,
   buildKeyboard,
   buildMediaKeyboard,
   buildWelcomeMessage,
+  toHebrewNumerals,
 } from '../../src/messageBuilder.js';
 
-describe('buildDailyMessages', () => {
-  const mockNachYomi = {
-    book: 'Joshua',
-    chapter: 1,
-    hebrewDate: '5 Shevat 5784',
+describe('buildDayHeader', () => {
+  const mockSchedule = {
+    dayNumber: 1,
+    cycleNumber: 1,
+    chapters: [
+      { book: 'Isaiah', chapter: 1, shiurId: 32996326 },
+      { book: 'Isaiah', chapter: 2, shiurId: 32996737 },
+    ],
   };
 
-  describe('basic functionality', () => {
-    it('should return array with header when no chapter text provided', () => {
-      const messages = buildDailyMessages(mockNachYomi);
-      expect(Array.isArray(messages)).toBe(true);
-      expect(messages.length).toBe(1);
-      expect(messages[0]).toContain('Joshua 1');
-    });
-
-    it('should format book and chapter in header', () => {
-      const messages = buildDailyMessages(mockNachYomi);
-      expect(messages[0]).toContain('Joshua 1');
-    });
-
-    it('should include Hebrew date in header', () => {
-      const messages = buildDailyMessages(mockNachYomi);
-      expect(messages[0]).toContain('5 Shevat 5784');
-    });
-
-    it('should include Hebrew book name', () => {
-      const messages = buildDailyMessages(mockNachYomi);
-      expect(messages[0]).toContain('יהושע'); // Hebrew name for Joshua
-    });
+  it('should include the day number', () => {
+    const header = buildDayHeader(mockSchedule);
+    expect(header).toContain('Day 1');
   });
 
-  describe('with chapter text', () => {
-    const mockChapterText = {
-      hebrewText: ['פסוק ראשון', 'פסוק שני', 'פסוק שלישי'],
-      englishText: ['First verse', 'Second verse', 'Third verse'],
+  it('should include both chapters', () => {
+    const header = buildDayHeader(mockSchedule);
+    expect(header).toContain('Isaiah 1');
+    expect(header).toContain('Isaiah 2');
+  });
+
+  it('should include Hebrew book name', () => {
+    const header = buildDayHeader(mockSchedule);
+    expect(header).toContain('ישעיהו');
+  });
+
+  it('should include Hebrew numerals for chapters', () => {
+    const header = buildDayHeader(mockSchedule);
+    expect(header).toContain('א');
+    expect(header).toContain('ב');
+  });
+
+  it('should handle cross-book chapters', () => {
+    const crossBook = {
+      dayNumber: 34,
+      cycleNumber: 1,
+      chapters: [
+        { book: 'Jeremiah', chapter: 1, shiurId: 33355674 },
+        { book: 'Jeremiah', chapter: 2, shiurId: 33355728 },
+      ],
     };
-
-    it('should combine Hebrew and English verses', () => {
-      const messages = buildDailyMessages(mockNachYomi, mockChapterText);
-      expect(messages[0]).toContain('פסוק ראשון');
-      expect(messages[0]).toContain('First verse');
-    });
-
-    it('should number verses with Hebrew numerals', () => {
-      const messages = buildDailyMessages(mockNachYomi, mockChapterText);
-      expect(messages[0]).toContain('א.');
-      expect(messages[0]).toContain('ב.');
-      expect(messages[0]).toContain('ג.');
-    });
-
-    it('should handle missing English text', () => {
-      const hebrewOnlyText = {
-        hebrewText: ['פסוק ראשון'],
-        englishText: [],
-      };
-      const messages = buildDailyMessages(mockNachYomi, hebrewOnlyText);
-      expect(messages[0]).toContain('פסוק ראשון');
-    });
-  });
-
-  describe('message splitting', () => {
-    it('should split messages when content exceeds limit', () => {
-      const longChapterText = {
-        hebrewText: Array(100).fill('פסוק ארוך מאוד '.repeat(20)),
-        englishText: Array(100).fill('This is a very long verse '.repeat(20)),
-      };
-      const messages = buildDailyMessages(mockNachYomi, longChapterText);
-      expect(messages.length).toBeGreaterThan(1);
-    });
-  });
-
-  describe('edge cases', () => {
-    it('should handle empty hebrewText array', () => {
-      const emptyText = { hebrewText: [], englishText: [] };
-      const messages = buildDailyMessages(mockNachYomi, emptyText);
-      expect(messages.length).toBe(1);
-    });
-
-    it('should handle null chapterText', () => {
-      const messages = buildDailyMessages(mockNachYomi, null);
-      expect(messages.length).toBe(1);
-    });
-
-    it('should handle undefined chapterText', () => {
-      const messages = buildDailyMessages(mockNachYomi, undefined);
-      expect(messages.length).toBe(1);
-    });
-  });
-});
-
-describe('buildDailyMessage', () => {
-  it('should return single message string', () => {
-    const nachYomi = { book: 'Joshua', chapter: 1, hebrewDate: '5 Shevat' };
-    const result = buildDailyMessage(nachYomi);
-    expect(typeof result).toBe('string');
-  });
-
-  it('should return first message when multiple exist', () => {
-    const nachYomi = { book: 'Joshua', chapter: 1, hebrewDate: '5 Shevat' };
-    const result = buildDailyMessage(nachYomi);
-    expect(result).toContain('Joshua');
+    const header = buildDayHeader(crossBook);
+    expect(header).toContain('Jeremiah 1');
+    expect(header).toContain('Jeremiah 2');
+    expect(header).toContain('ירמיהו');
   });
 });
 
@@ -199,6 +143,11 @@ describe('buildWelcomeMessage', () => {
     expect(message).toContain('*Nach Yomi*');
   });
 
+  it('should mention two chapters', () => {
+    const message = buildWelcomeMessage();
+    expect(message).toMatch(/two chapters/i);
+  });
+
   it('should mention audio shiur', () => {
     const message = buildWelcomeMessage();
     expect(message).toMatch(/audio/i);
@@ -207,11 +156,6 @@ describe('buildWelcomeMessage', () => {
   it('should mention video', () => {
     const message = buildWelcomeMessage();
     expect(message).toMatch(/video/i);
-  });
-
-  it('should mention text', () => {
-    const message = buildWelcomeMessage();
-    expect(message).toMatch(/text/i);
   });
 
   it('should mention 6 AM Israel time', () => {
@@ -228,30 +172,33 @@ describe('buildWelcomeMessage', () => {
     const message = buildWelcomeMessage();
     expect(message).toContain('Rav');
   });
+
+  it('should not mention text or Hebrew/English', () => {
+    const message = buildWelcomeMessage();
+    expect(message).not.toMatch(/Hebrew \+ English/i);
+  });
 });
 
-describe('Hebrew numerals (tested indirectly)', () => {
-  it('should convert chapter 1 to א', () => {
-    const nachYomi = { book: 'Joshua', chapter: 1, hebrewDate: 'test' };
-    const messages = buildDailyMessages(nachYomi);
-    expect(messages[0]).toContain('א');
+describe('toHebrewNumerals', () => {
+  it('should convert 1 to א', () => {
+    expect(toHebrewNumerals(1)).toBe('א');
   });
 
-  it('should convert chapter 10 to י', () => {
-    const nachYomi = { book: 'Joshua', chapter: 10, hebrewDate: 'test' };
-    const messages = buildDailyMessages(nachYomi);
-    expect(messages[0]).toContain('י');
+  it('should convert 10 to י', () => {
+    expect(toHebrewNumerals(10)).toBe('י');
   });
 
   it('should handle special case 15 as ט״ו', () => {
-    const nachYomi = { book: 'Joshua', chapter: 15, hebrewDate: 'test' };
-    const messages = buildDailyMessages(nachYomi);
-    expect(messages[0]).toContain('ט״ו');
+    expect(toHebrewNumerals(15)).toBe('ט״ו');
   });
 
   it('should handle special case 16 as ט״ז', () => {
-    const nachYomi = { book: 'Joshua', chapter: 16, hebrewDate: 'test' };
-    const messages = buildDailyMessages(nachYomi);
-    expect(messages[0]).toContain('ט״ז');
+    expect(toHebrewNumerals(16)).toBe('ט״ז');
+  });
+
+  it('should convert 150 correctly', () => {
+    const result = toHebrewNumerals(150);
+    expect(result).toContain('ק');
+    expect(result).toContain('נ');
   });
 });

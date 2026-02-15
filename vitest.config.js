@@ -12,9 +12,6 @@ export default defineConfig({
       include: ['src/**/*.js'],
       exclude: [
         'src/index.js', // Entry point with side effects
-        'src/hebcalService.js', // External API calls
-        'src/sefariaService.js', // External API calls
-        'src/videoService.js', // Legacy, no longer used in main flow
         'src/unified/**', // External API calls
       ],
       thresholds: {
