@@ -50,8 +50,7 @@ The bot runs on GitHub Actions (free). Key workflows:
 
 | Workflow | Schedule | Purpose |
 |----------|----------|---------|
-| `daily-broadcast.yml` | 3 AM + 4 AM UTC | Sends 6 AM Israel broadcast (handles DST) |
-| `poll-commands.yml` | Every 5 minutes | Responds to bot commands |
+| `daily-broadcast.yml` | 3 AM + 4 AM UTC | Sends 6 AM Israel broadcast with 2 chapters (handles DST) |
 | `ci.yml` | On push/PR | Runs lint, format, and tests |
 
 ### Testing Broadcasts Locally
@@ -59,15 +58,12 @@ The bot runs on GitHub Actions (free). Key workflows:
 ```bash
 # Force a broadcast (bypasses 6am check)
 FORCE_BROADCAST=true node scripts/broadcast.js
-
-# Test command polling
-node scripts/poll-commands.js
 ```
 
 ### Manual Workflow Triggers
 
 1. Go to **Actions** tab on GitHub
-2. Select **Daily Broadcast** or **Poll Commands**
+2. Select **Daily Broadcast**
 3. Click **Run workflow**
 4. For broadcasts, check **Force broadcast** to bypass time check
 
@@ -107,7 +103,7 @@ All pull requests must:
 
 - Place unit tests in `tests/unit/`
 - Use descriptive test names that explain the expected behavior
-- Mock external APIs using fixtures in `tests/fixtures/`
+- Mock external dependencies using `vi.mock()`
 - Test edge cases and error conditions
 
 ### Manual Testing
@@ -115,9 +111,9 @@ All pull requests must:
 Before submitting:
 
 1. Run the bot locally with a test token
-2. Test all commands (`/start`, `/video`, `/audio`, `/text`)
-3. Verify media embedding works
-4. Check error handling with invalid inputs
+2. Test `/start` command
+3. Verify audio embedding and video links work
+4. Check error handling
 
 ## Questions
 
