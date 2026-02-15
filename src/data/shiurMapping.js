@@ -988,7 +988,7 @@ export function getShiurThumbnailUrl(shiurId) {
  */
 export function getShiurAudioUrl(shiurId) {
   if (!shiurId) return null;
-  return `https://www2.kolhalashon.com/api/files/GetMp3FileToPlay/${shiurId}`;
+  return `https://www.kolhalashon.com/api/files/GetMp3FileToPlay/${shiurId}`;
 }
 
 /**
