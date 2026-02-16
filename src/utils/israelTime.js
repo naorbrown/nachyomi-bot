@@ -19,10 +19,10 @@ export function getIsraelHour() {
 }
 
 /**
- * Check if it's currently 6am Israel time
+ * Check if it's currently 3am Israel time
  * Handles DST automatically using Intl API
- * @returns {boolean} true if it's 6am in Israel
+ * @returns {boolean} true if it's 3am in Israel
  */
-export function isIsrael6am() {
-  return getIsraelHour() === 6;
+export function isIsrael3am() {
+  return getIsraelHour() === 3;
 }

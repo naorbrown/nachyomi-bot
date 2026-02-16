@@ -20,7 +20,7 @@
 1. Open Telegram
 2. Search for **@NachYomi_Bot** or [click here](https://t.me/NachYomi_Bot)
 3. Press **Start**
-4. You're subscribed! Receive daily shiurim at 6 AM Israel time
+4. You're subscribed! Receive daily shiurim at 3 AM Israel time
 
 ---
 
@@ -32,7 +32,7 @@ Nach Yomi is the daily study of Nevi'im (Prophets) and Ketuvim (Writings) — tw
 
 - **Listen** — Complete audio shiurim embedded directly in Telegram (primary content)
 - **Watch** — Links to full video shiurim on Kol Halashon
-- **Daily** — Self-managed 2-chapter/day schedule, posts at 6 AM Israel time
+- **Daily** — Self-managed 2-chapter/day schedule, posts at 3 AM Israel time
 - **742 chapters** — 100% shiur coverage for all of Nach
 
 ## Deploy Your Own
@@ -50,7 +50,7 @@ Schedule daily broadcasts via GitHub Actions — no server required for channel 
 4. Enable GitHub Actions in your fork
 
 **What runs automatically:**
-- **Daily broadcast** at 6:00 AM Israel time (handles DST)
+- **Daily broadcast** at 3:00 AM Israel time (handles DST)
 
 **Note:** The `/start` command subscribes users to daily broadcasts.
 
@@ -85,7 +85,7 @@ Send `/start` to the bot. You'll receive:
 1. **Audio shiur** — Embedded MP3 by Rav Breitowitz
 2. **Video link** — Watch on Kol Halashon
 
-You're automatically subscribed for daily broadcasts at 6 AM Israel time.
+You're automatically subscribed for daily broadcasts at 3 AM Israel time.
 
 ## Configuration
 
@@ -180,7 +180,7 @@ nachyomi-bot/
 |-----------|------------|---------|
 | Runtime | Node.js 18+ | ES modules, async/await |
 | Bot Framework | node-telegram-bot-api | Telegram integration |
-| Scheduler | GitHub Actions / node-cron | Daily 6 AM posts |
+| Scheduler | GitHub Actions / node-cron | Daily 3 AM posts |
 | Containerization | Docker | Alternative deployment |
 | CI/CD | GitHub Actions | Automated builds and bot operation |
 | Testing | Vitest | Unit tests with coverage |
