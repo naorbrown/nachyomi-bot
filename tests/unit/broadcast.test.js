@@ -144,15 +144,15 @@ describe('Broadcast Script', () => {
       const broadcastPath = resolve('./scripts/broadcast.js');
       const content = await readFile(broadcastPath, 'utf-8');
 
-      expect(content).toMatch(/isIsrael6am/);
+      expect(content).toMatch(/isIsrael3am/);
       expect(content).toMatch(/getIsraelHour/);
     });
 
-    it('should skip broadcast if not 6am Israel time (unless forced)', async () => {
+    it('should skip broadcast if not 3am Israel time (unless forced)', async () => {
       const broadcastPath = resolve('./scripts/broadcast.js');
       const content = await readFile(broadcastPath, 'utf-8');
 
-      expect(content).toMatch(/!FORCE_BROADCAST\s*&&\s*!isIsrael6am/);
+      expect(content).toMatch(/!FORCE_BROADCAST\s*&&\s*!isIsrael3am/);
     });
   });
 });

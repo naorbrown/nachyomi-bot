@@ -4,13 +4,13 @@ import { resolve } from 'path';
 
 describe('GitHub Workflows', () => {
   describe('Daily Broadcast Workflow', () => {
-    it('should run at both 3am and 4am UTC for DST handling', async () => {
+    it('should run at both 0am and 1am UTC for DST handling', async () => {
       const workflowPath = resolve('./.github/workflows/daily-broadcast.yml');
       const content = await readFile(workflowPath, 'utf-8');
 
       // Should have both cron schedules for DST
-      expect(content).toMatch(/cron:\s*'0 3 \* \* \*'/);
-      expect(content).toMatch(/cron:\s*'0 4 \* \* \*'/);
+      expect(content).toMatch(/cron:\s*'0 0 \* \* \*'/);
+      expect(content).toMatch(/cron:\s*'0 1 \* \* \*'/);
     });
 
     it('should support force broadcast input', async () => {

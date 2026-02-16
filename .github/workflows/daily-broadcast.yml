@@ -2,12 +2,12 @@ name: Daily Broadcast
 
 on:
   schedule:
-    # Run at both possible 6am Israel times to handle DST
-    # Winter (UTC+2): 6am Israel = 4am UTC
-    # Summer (UTC+3): 6am Israel = 3am UTC
+    # Run at both possible 3am Israel times to handle DST
+    # Winter (UTC+2): 3am Israel = 1am UTC
+    # Summer (UTC+3): 3am Israel = 0am UTC
     # Script checks Israel time + "already sent today" to prevent duplicates
-    - cron: '0 3 * * *'
-    - cron: '0 4 * * *'
+    - cron: '0 0 * * *'
+    - cron: '0 1 * * *'
   workflow_dispatch:
     inputs:
       force:
