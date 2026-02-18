@@ -19,10 +19,13 @@ export function getIsraelHour() {
 }
 
 /**
- * Check if it's currently 3am Israel time
- * Handles DST automatically using Intl API
- * @returns {boolean} true if it's 3am in Israel
+ * Check if current Israel time is within the broadcast window (midnight–6am).
+ * Uses a window instead of an exact hour to tolerate GitHub Actions cron delays,
+ * which can be 30-90+ minutes. Duplicate prevention is handled separately by
+ * the sentinel cache and broadcastState.
+ * @returns {boolean} true if Israel hour is 0-6
  */
-export function isIsrael3am() {
-  return getIsraelHour() === 3;
+export function isIsraelBroadcastWindow() {
+  const hour = getIsraelHour();
+  return hour >= 0 && hour <= 6;
 }
