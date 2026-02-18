@@ -20,7 +20,7 @@ import TelegramBot from 'node-telegram-bot-api';
 import { getTodaysChapters } from '../src/scheduleService.js';
 import { buildDayHeader, buildMediaCaption, buildMediaKeyboard, buildKeyboard } from '../src/messageBuilder.js';
 import { getShiurAudioUrl, getShiurUrl } from '../src/data/shiurMapping.js';
-import { isIsrael3am, getIsraelHour } from '../src/utils/israelTime.js';
+import { isIsraelBroadcastWindow, getIsraelHour } from '../src/utils/israelTime.js';
 import { loadSubscribers } from '../src/utils/subscribers.js';
 import { wasBroadcastSentToday, markBroadcastSent, getIsraelDate } from '../src/utils/broadcastState.js';
 import { isUnifiedChannelEnabled, publishDailyToUnified } from '../src/unified/index.js';
@@ -158,14 +158,14 @@ async function runBroadcast() {
     process.exit(0);
   }
 
-  // Time check (skip if not 3am Israel, unless forced)
-  if (!FORCE_BROADCAST && !isIsrael3am()) {
-    console.log(`Not 3am Israel time (hour=${getIsraelHour()}), skipping.`);
+  // Time check (skip if outside broadcast window, unless forced)
+  if (!FORCE_BROADCAST && !isIsraelBroadcastWindow()) {
+    console.log(`Outside broadcast window (hour=${getIsraelHour()}, need 0-6), skipping.`);
     console.log('Use FORCE_BROADCAST=true to override.');
     process.exit(0);
   }
 
-  console.log(FORCE_BROADCAST ? 'FORCE_BROADCAST enabled - bypassing checks' : '3am Israel time confirmed, not yet sent today');
+  console.log(FORCE_BROADCAST ? 'FORCE_BROADCAST enabled - bypassing checks' : `Broadcast window confirmed (hour=${getIsraelHour()}), not yet sent today`);
 
   // Get today's chapters
   const todaysSchedule = getTodaysChapters();

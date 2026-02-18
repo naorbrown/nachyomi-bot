@@ -140,19 +140,19 @@ describe('Broadcast Script', () => {
   });
 
   describe('Israel Time Check', () => {
-    it('should check Israel time before broadcasting', async () => {
+    it('should check Israel time broadcast window before broadcasting', async () => {
       const broadcastPath = resolve('./scripts/broadcast.js');
       const content = await readFile(broadcastPath, 'utf-8');
 
-      expect(content).toMatch(/isIsrael3am/);
+      expect(content).toMatch(/isIsraelBroadcastWindow/);
       expect(content).toMatch(/getIsraelHour/);
     });
 
-    it('should skip broadcast if not 3am Israel time (unless forced)', async () => {
+    it('should skip broadcast if outside broadcast window (unless forced)', async () => {
       const broadcastPath = resolve('./scripts/broadcast.js');
       const content = await readFile(broadcastPath, 'utf-8');
 
-      expect(content).toMatch(/!FORCE_BROADCAST\s*&&\s*!isIsrael3am/);
+      expect(content).toMatch(/!FORCE_BROADCAST\s*&&\s*!isIsraelBroadcastWindow/);
     });
   });
 });
