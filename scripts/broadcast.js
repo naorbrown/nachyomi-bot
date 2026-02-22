@@ -8,7 +8,7 @@
  * 3. All private bot subscribers
  * 4. Admin chat (TELEGRAM_CHAT_ID) - always included
  *
- * Content: Day header + Audio (embedded) + Video Link per chapter
+ * Content: Day header + Audio (embedded) per chapter
  *
  * Usage: node scripts/broadcast.js
  * Requires: TELEGRAM_BOT_TOKEN
@@ -18,8 +18,8 @@
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
 import { getTodaysChapters } from '../src/scheduleService.js';
-import { buildDayHeader, buildMediaCaption, buildMediaKeyboard, buildKeyboard } from '../src/messageBuilder.js';
-import { getShiurAudioUrl, getShiurUrl } from '../src/data/shiurMapping.js';
+import { buildDayHeader, buildAudioCaption, buildChapterKeyboard } from '../src/messageBuilder.js';
+import { getShiurAudioUrl } from '../src/data/shiurMapping.js';
 import { isIsraelBroadcastWindow, getIsraelHour } from '../src/utils/israelTime.js';
 import { loadSubscribers } from '../src/utils/subscribers.js';
 import { wasBroadcastSentToday, markBroadcastSent, getIsraelDate } from '../src/utils/broadcastState.js';
@@ -59,11 +59,11 @@ if (!ADMIN_CHAT_ID && !CHANNEL_ID) {
 const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
 /**
- * Send audio shiur (embedded)
+ * Send audio shiur (embedded) with inline buttons.
  * NO RETRY: Prevents duplicates if partial failure occurs
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function sendAudio(chatId, chapter, botInstance = bot) {
+async function sendAudio(chatId, chapter, isLast = false, botInstance = bot) {
   if (!chapter.shiurId) {
     return { success: false, error: 'No shiur ID' };
   }
@@ -74,9 +74,9 @@ async function sendAudio(chatId, chapter, botInstance = bot) {
     await botInstance.sendAudio(chatId, audioUrl, {
       title: `${chapter.book} ${chapter.chapter}`,
       performer: 'Rav Yitzchok Breitowitz',
-      caption: buildMediaCaption(chapter, 'audio'),
+      caption: buildAudioCaption(chapter),
       parse_mode: 'Markdown',
-      reply_markup: buildMediaKeyboard(chapter.book, chapter.chapter),
+      reply_markup: buildChapterKeyboard(chapter.book, chapter.chapter, isLast),
     });
     console.log(`  Audio sent successfully`);
     return { success: true };
@@ -87,29 +87,10 @@ async function sendAudio(chatId, chapter, botInstance = bot) {
 }
 
 /**
- * Send video link
- * @returns {Promise<{success: boolean, error?: string}>}
- */
-async function sendVideoLink(chatId, chapter, isLast = false, botInstance = bot) {
-  const shiurPageUrl = getShiurUrl(chapter.book, chapter.chapter);
-
-  try {
-    console.log(`  Sending video link for ${chapter.book} ${chapter.chapter} to ${chatId}...`);
-    await botInstance.sendMessage(chatId, `🎬 [Watch Video Shiur — ${chapter.book} ${chapter.chapter}](${shiurPageUrl})`, {
-      parse_mode: 'Markdown',
-      disable_web_page_preview: true,
-      reply_markup: isLast ? buildKeyboard(chapter.book, chapter.chapter) : undefined,
-    });
-    console.log(`  Video link sent successfully`);
-    return { success: true };
-  } catch (err) {
-    console.error(`  Video link FAILED for ${chapter.book} ${chapter.chapter}: ${err.message}`);
-    return { success: false, error: err.message };
-  }
-}
-
-/**
- * Send full daily content to a single chat
+ * Send full daily content to a single chat:
+ * 1. Day header
+ * 2. Audio per chapter (last one includes Share button)
+ *
  * NO RETRY: Prevents duplicates if partial failure occurs
  * @returns {Promise<{anySuccess: boolean}>}
  */
@@ -128,15 +109,13 @@ async function sendDailyContent(chatId, todaysSchedule, botInstance = bot) {
     console.error(`  Header FAILED for ${chatId}: ${err.message}`);
   }
 
-  // Send audio + video for each chapter
+  // Send audio for each chapter
   for (let i = 0; i < todaysSchedule.chapters.length; i++) {
     const chapter = todaysSchedule.chapters[i];
     const isLast = i === todaysSchedule.chapters.length - 1;
 
-    const audioResult = await sendAudio(chatId, chapter, botInstance);
-    const videoResult = await sendVideoLink(chatId, chapter, isLast, botInstance);
-
-    if (audioResult.success || videoResult.success) anySuccess = true;
+    const audioResult = await sendAudio(chatId, chapter, isLast, botInstance);
+    if (audioResult.success) anySuccess = true;
   }
 
   console.log(`  Result for ${chatId}: ${anySuccess ? 'SUCCESS' : 'ALL FAILED'}`);

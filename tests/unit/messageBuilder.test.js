@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildDayHeader,
-  buildMediaCaption,
-  buildKeyboard,
-  buildMediaKeyboard,
+  buildAudioCaption,
+  buildChapterKeyboard,
   buildWelcomeMessage,
   toHebrewNumerals,
 } from '../../src/messageBuilder.js';
@@ -56,49 +55,34 @@ describe('buildDayHeader', () => {
   });
 });
 
-describe('buildMediaCaption', () => {
-  const mockNachYomi = { book: 'Joshua', chapter: 1 };
-
-  it('should use video icon for video mediaType', () => {
-    const caption = buildMediaCaption(mockNachYomi, 'video');
-    expect(caption).toContain('🎬');
-  });
-
-  it('should use audio icon for audio mediaType', () => {
-    const caption = buildMediaCaption(mockNachYomi, 'audio');
-    expect(caption).toContain('🎧');
-  });
+describe('buildAudioCaption', () => {
+  const mockChapter = { book: 'Joshua', chapter: 1 };
 
   it('should include book and chapter', () => {
-    const caption = buildMediaCaption(mockNachYomi, 'video');
+    const caption = buildAudioCaption(mockChapter);
     expect(caption).toContain('Joshua 1');
   });
 
   it('should include Hebrew book name', () => {
-    const caption = buildMediaCaption(mockNachYomi, 'video');
+    const caption = buildAudioCaption(mockChapter);
     expect(caption).toContain('יהושע');
   });
 
-  it('should include Rav attribution', () => {
-    const caption = buildMediaCaption(mockNachYomi, 'video');
-    expect(caption).toContain('Rav Yitzchok Breitowitz');
-  });
-
-  it('should default to video icon', () => {
-    const caption = buildMediaCaption(mockNachYomi);
-    expect(caption).toContain('🎬');
+  it('should not include performer (already in audio metadata)', () => {
+    const caption = buildAudioCaption(mockChapter);
+    expect(caption).not.toContain('Breitowitz');
   });
 });
 
-describe('buildKeyboard', () => {
+describe('buildChapterKeyboard', () => {
   it('should generate valid inline keyboard structure', () => {
-    const keyboard = buildKeyboard('Joshua', 1);
+    const keyboard = buildChapterKeyboard('Joshua', 1);
     expect(keyboard).toHaveProperty('inline_keyboard');
     expect(Array.isArray(keyboard.inline_keyboard)).toBe(true);
   });
 
   it('should include Full Shiur button', () => {
-    const keyboard = buildKeyboard('Joshua', 1);
+    const keyboard = buildChapterKeyboard('Joshua', 1);
     const buttons = keyboard.inline_keyboard.flat();
     const shiurButton = buttons.find(b => b.text.includes('Full Shiur'));
     expect(shiurButton).toBeTruthy();
@@ -106,34 +90,34 @@ describe('buildKeyboard', () => {
   });
 
   it('should include Sefaria button', () => {
-    const keyboard = buildKeyboard('Joshua', 1);
+    const keyboard = buildChapterKeyboard('Joshua', 1);
     const buttons = keyboard.inline_keyboard.flat();
     const sefariaButton = buttons.find(b => b.text.includes('Sefaria'));
     expect(sefariaButton).toBeTruthy();
     expect(sefariaButton.url).toContain('sefaria.org');
   });
 
-  it('should include Share button with switch_inline_query', () => {
-    const keyboard = buildKeyboard('Joshua', 1);
+  it('should NOT include Share button when not last', () => {
+    const keyboard = buildChapterKeyboard('Joshua', 1, false);
+    const buttons = keyboard.inline_keyboard.flat();
+    const shareButton = buttons.find(b => b.text.includes('Share'));
+    expect(shareButton).toBeUndefined();
+  });
+
+  it('should include Share button when last', () => {
+    const keyboard = buildChapterKeyboard('Joshua', 1, true);
     const buttons = keyboard.inline_keyboard.flat();
     const shareButton = buttons.find(b => b.text.includes('Share'));
     expect(shareButton).toBeTruthy();
     expect(shareButton.switch_inline_query).toContain('Joshua 1');
   });
-});
 
-describe('buildMediaKeyboard', () => {
-  it('should have two buttons', () => {
-    const keyboard = buildMediaKeyboard('Joshua', 1);
-    const buttons = keyboard.inline_keyboard.flat();
-    expect(buttons.length).toBe(2);
-  });
+  it('should have one row when not last, two rows when last', () => {
+    const notLast = buildChapterKeyboard('Joshua', 1, false);
+    expect(notLast.inline_keyboard.length).toBe(1);
 
-  it('should generate correct URLs', () => {
-    const keyboard = buildMediaKeyboard('Joshua', 1);
-    const buttons = keyboard.inline_keyboard.flat();
-    expect(buttons[0].url).toContain('kolhalashon');
-    expect(buttons[1].url).toContain('sefaria');
+    const last = buildChapterKeyboard('Joshua', 1, true);
+    expect(last.inline_keyboard.length).toBe(2);
   });
 });
 
@@ -148,19 +132,9 @@ describe('buildWelcomeMessage', () => {
     expect(message).toMatch(/two chapters/i);
   });
 
-  it('should mention audio shiur', () => {
+  it('should mention audio', () => {
     const message = buildWelcomeMessage();
     expect(message).toMatch(/audio/i);
-  });
-
-  it('should mention video', () => {
-    const message = buildWelcomeMessage();
-    expect(message).toMatch(/video/i);
-  });
-
-  it('should mention 6 AM Israel time', () => {
-    const message = buildWelcomeMessage();
-    expect(message).toContain('6 AM Israel');
   });
 
   it('should mention subscription', () => {
@@ -171,11 +145,6 @@ describe('buildWelcomeMessage', () => {
   it('should mention Rav Breitowitz', () => {
     const message = buildWelcomeMessage();
     expect(message).toContain('Rav');
-  });
-
-  it('should not mention text or Hebrew/English', () => {
-    const message = buildWelcomeMessage();
-    expect(message).not.toMatch(/Hebrew \+ English/i);
   });
 });
 

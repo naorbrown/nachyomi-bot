@@ -73,11 +73,12 @@ describe('Broadcast Script', () => {
       expect(content).toMatch(/sendAudio/);
     });
 
-    it('should send video as link, not embedded', async () => {
+    it('should not send separate video link messages', async () => {
       const broadcastPath = resolve('./scripts/broadcast.js');
       const content = await readFile(broadcastPath, 'utf-8');
 
-      expect(content).toMatch(/sendVideoLink/);
+      // Video link is accessible via inline button, not a separate message
+      expect(content).not.toMatch(/sendVideoLink/);
       expect(content).not.toMatch(/sendVideoShiur/);
       expect(content).not.toMatch(/videoService/);
     });
