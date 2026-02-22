@@ -2,7 +2,7 @@
  * Nach Yomi Telegram Bot
  *
  * Daily Nach chapters with Rav Breitowitz's shiurim from Kol Halashon.
- * Audio embedded, video as link. Two chapters per day.
+ * Audio embedded with inline buttons. Two chapters per day.
  *
  * /start - Subscribe and get today's shiurim
  */
@@ -12,12 +12,11 @@ import TelegramBot from 'node-telegram-bot-api';
 import { getTodaysChapters } from './scheduleService.js';
 import {
   buildDayHeader,
-  buildMediaCaption,
-  buildMediaKeyboard,
-  buildKeyboard,
+  buildAudioCaption,
+  buildChapterKeyboard,
   buildWelcomeMessage,
 } from './messageBuilder.js';
-import { getShiurAudioUrl, getShiurUrl } from './data/shiurMapping.js';
+import { getShiurAudioUrl } from './data/shiurMapping.js';
 import { addSubscriber } from './utils/subscribers.js';
 import { createRateLimiter } from './utils/rateLimiter.js';
 
@@ -39,18 +38,18 @@ const limiter = createRateLimiter();
 })();
 
 /**
- * Send audio (embedded)
+ * Send audio shiur (embedded) with inline buttons
  */
-async function sendAudio(chatId, chapter) {
+async function sendAudio(chatId, chapter, isLast = false) {
   if (!chapter.shiurId) return false;
 
   try {
     await bot.sendAudio(chatId, getShiurAudioUrl(chapter.shiurId), {
       title: `${chapter.book} ${chapter.chapter}`,
       performer: 'Rav Yitzchok Breitowitz',
-      caption: buildMediaCaption(chapter, 'audio'),
+      caption: buildAudioCaption(chapter),
       parse_mode: 'Markdown',
-      reply_markup: buildMediaKeyboard(chapter.book, chapter.chapter),
+      reply_markup: buildChapterKeyboard(chapter.book, chapter.chapter, isLast),
     });
     return true;
   } catch (err) {
@@ -60,39 +59,17 @@ async function sendAudio(chatId, chapter) {
 }
 
 /**
- * Send video link
- */
-async function sendVideoLink(chatId, chapter, isLast = false) {
-  try {
-    await bot.sendMessage(
-      chatId,
-      `🎬 [Watch Video Shiur — ${chapter.book} ${chapter.chapter}](${getShiurUrl(chapter.book, chapter.chapter)})`,
-      {
-        parse_mode: 'Markdown',
-        disable_web_page_preview: true,
-        reply_markup: isLast ? buildKeyboard(chapter.book, chapter.chapter) : undefined,
-      }
-    );
-    return true;
-  } catch (err) {
-    console.warn('Video link failed:', err.message);
-    return false;
-  }
-}
-
-/**
- * Send full daily content to a chat
+ * Send full daily content to a chat:
+ * 1. Day header
+ * 2. Audio per chapter (last one includes Share button)
  */
 async function sendDailyContent(chatId, todaysSchedule) {
-  // Day header
   await bot.sendMessage(chatId, buildDayHeader(todaysSchedule), { parse_mode: 'Markdown' });
 
-  // Audio + video for each chapter
   for (let i = 0; i < todaysSchedule.chapters.length; i++) {
     const chapter = todaysSchedule.chapters[i];
     const isLast = i === todaysSchedule.chapters.length - 1;
-    await sendAudio(chatId, chapter);
-    await sendVideoLink(chatId, chapter, isLast);
+    await sendAudio(chatId, chapter, isLast);
   }
 }
 
@@ -110,14 +87,11 @@ bot.on('message', async msg => {
   }
 
   try {
-    // Subscribe user
     const isNew = await addSubscriber(chatId);
     if (isNew) console.log(`New subscriber: ${chatId}`);
 
-    // Welcome
     await bot.sendMessage(chatId, buildWelcomeMessage(), { parse_mode: 'Markdown' });
 
-    // Get today's content
     const todaysSchedule = getTodaysChapters();
     await sendDailyContent(chatId, todaysSchedule);
   } catch (err) {

@@ -56,52 +56,32 @@ export function buildDayHeader(todaysSchedule) {
 }
 
 /**
- * Build a compact caption for media messages (video/audio)
+ * Build caption for audio messages.
+ * Performer is already in the audio metadata, so keep the caption minimal.
  */
-export function buildMediaCaption(nachYomi, mediaType = 'video') {
-  const { book, chapter } = nachYomi;
+export function buildAudioCaption(chapter) {
+  const { book, chapter: ch } = chapter;
   const hebrewName = hebrewNames[book] || book;
-  const icon = mediaType === 'video' ? '🎬' : '🎧';
-
-  return (
-    `${icon} *${book} ${chapter}* · ${hebrewName} ${toHebrewNumerals(chapter)}\n` +
-    `_Rav Yitzchok Breitowitz_`
-  );
+  return `*${book} ${ch}* · ${hebrewName} ${toHebrewNumerals(ch)}`;
 }
 
 /**
- * Build inline keyboard for the last message
+ * Build inline keyboard for a chapter's audio message.
+ * Last chapter in the day includes a Share button.
  */
-export function buildKeyboard(book, chapter) {
-  const shiurUrl = getShiurUrl(book, chapter);
-  const sefariaUrl = getSefariaUrl(book, chapter);
-
-  return {
-    inline_keyboard: [
-      [
-        { text: '🎬 Full Shiur', url: shiurUrl },
-        { text: '📖 Sefaria', url: sefariaUrl },
-      ],
-      [{ text: '📤 Share', switch_inline_query: `Nach Yomi: ${book} ${chapter}` }],
+export function buildChapterKeyboard(book, chapter, isLast = false) {
+  const rows = [
+    [
+      { text: '📖 Sefaria', url: getSefariaUrl(book, chapter) },
+      { text: '🔗 Full Shiur', url: getShiurUrl(book, chapter) },
     ],
-  };
-}
+  ];
 
-/**
- * Build keyboard for media messages
- */
-export function buildMediaKeyboard(book, chapter) {
-  const shiurUrl = getShiurUrl(book, chapter);
-  const sefariaUrl = getSefariaUrl(book, chapter);
+  if (isLast) {
+    rows.push([{ text: '📤 Share', switch_inline_query: `Nach Yomi: ${book} ${chapter}` }]);
+  }
 
-  return {
-    inline_keyboard: [
-      [
-        { text: '🌐 Full Shiur', url: shiurUrl },
-        { text: '📖 Sefaria', url: sefariaUrl },
-      ],
-    ],
-  };
+  return { inline_keyboard: rows };
 }
 
 /**
@@ -111,9 +91,7 @@ export function buildWelcomeMessage() {
   return `📖 *Nach Yomi*
 
 Two chapters of Nevi'im and Ketuvim, every day.
+Audio shiurim by Rav Yitzchok Breitowitz.
 
-🎧 Audio shiur by Rav Yitzchok Breitowitz
-🎬 Video link to full shiur
-
-_You're subscribed! New chapters daily at 6 AM Israel time._`;
+_You're subscribed! Daily at 6 AM Israel time._`;
 }
